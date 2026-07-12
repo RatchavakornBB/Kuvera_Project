@@ -1,0 +1,38 @@
+@import 'tailwindcss';
+@import './styles/tokens.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-terminal-black);
+  color: #e7e7ea;
+  font-family: var(--font-sans);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-grid);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-terminal-black);
+}
+
+@keyframes pulse-dot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(109, 94, 245, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(109, 94, 245, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(109, 94, 245, 0);
+  }
+}

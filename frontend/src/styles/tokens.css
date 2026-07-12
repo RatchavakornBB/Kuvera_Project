@@ -1,0 +1,18 @@
+/* Design tokens — Kuvera Capital UX/UI spec Section 1.2 (color) & 1.3 (type).
+   Everything else in the app imports Tailwind utilities generated from this file —
+   do not hardcode these hex values anywhere else. */
+@theme {
+  --color-terminal-black: #0b0c0f; /* default page background, dark mode primary */
+  --color-panel: #16171c; /* cards, table zebra striping, sidebar, chat panel */
+  --color-grid: #2a2b33; /* hairline borders on every table and panel */
+  --color-ink: #ffffff; /* light mode canvas */
+  --color-violet: #6d5ef5; /* Signal Violet — AI accent: agent activity, chat, primary CTAs */
+  --color-blue: #3b82f6; /* Ledger Blue — links, selected states, financial figures */
+  --color-green: #1f9d6b; /* Confirm Green — won deals, approved, passed evals */
+  --color-amber: #c98a0a; /* Caution Amber — pending review, stalled, unresolved risk flags */
+  --color-red: #d64545; /* Alert Red — lost deals, rejected drafts, overdue items */
+  --color-gray: #8a8a93; /* Neutral Gray — disabled states, metadata, timestamps */
+
+  --font-sans: 'Inter', system-ui, sans-serif; /* UI / body / headings */
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace; /* data / numbers */
+}
