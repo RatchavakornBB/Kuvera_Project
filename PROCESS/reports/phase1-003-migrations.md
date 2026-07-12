@@ -1,0 +1,7 @@
+## Result: ✅ DoD met
+
+Gate: `supabase db reset` ✅ (clean apply, twice — once before the GRANT fix, once after) · schema verified via `docker exec ... psql \dt` and a foreign-key introspection query, both showing all 8 tables and the expected `deal_id`/`owner_id` relationships · real data-path test ✅ via `supabase-py`: insert a deal, insert a task with a `deal_id` FK, read it back (defaults `status='On track'`, `stage='Lead'` applied correctly), delete the deal, confirm the task cascade-deleted.
+
+Deviations from spec: none in the schema itself. Hit and fixed a non-obvious current-Supabase-CLI behavior mid-task — new `public` tables aren't auto-exposed to the Data API roles anymore, so the first insert attempt got `permission denied for table deals` (42501) even with the service_role key and RLS disabled. Root-caused via `config.toml`'s own `auto_expose_new_tables` comment, fixed with explicit `GRANT` statements at the end of the same migration (not a separate one — this migration hadn't been checkpointed as done yet), logged as D-005 since every future migration adding a `public` table needs to repeat it.
+
+Risks: RLS is disabled repo-wide for now (matches the Phase 1 "single seeded demo user" scope, Section 4.4) — needs real policies before Phase 3's multi-team deal walls. `anon`/`authenticated` roles have zero grants on these tables (only `service_role` does) — fine while only the backend talks to Supabase, but will need revisiting the day the frontend calls Supabase directly.
