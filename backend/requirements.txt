@@ -2,6 +2,8 @@ fastapi
 python-multipart
 uvicorn[standard]
 langgraph
+langgraph-checkpoint-postgres
+psycopg[binary]
 langchain-anthropic
 anthropic
 supabase

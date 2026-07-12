@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-REQUIRED_KEYS = ["ANTHROPIC_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
+REQUIRED_KEYS = ["ANTHROPIC_API_KEY", "SUPABASE_URL", "SUPABASE_KEY", "DATABASE_URL"]
 
 
 class AgentSettings:
@@ -25,6 +25,7 @@ class AgentSettings:
         self.anthropic_api_key = os.environ["ANTHROPIC_API_KEY"]
         self.supabase_url = os.environ["SUPABASE_URL"]
         self.supabase_key = os.environ["SUPABASE_KEY"]
+        self.database_url = os.environ["DATABASE_URL"]  # LangGraph Postgres Checkpointer only
         self.openai_api_key = os.environ.get("OPENAI_API_KEY")
         self.google_api_key = os.environ.get("GOOGLE_API_KEY")
 
