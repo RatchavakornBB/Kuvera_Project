@@ -1,8 +1,7 @@
 # PROCESS/backlog.md — ready / blocked / deferred work
 
 ## Ready
-- [ ] phase1-004-seed-script — 2–3 example deals incl. "Deal A". Depends on phase1-003 (done — 8-table schema live, verified end-to-end).
-- [ ] phase1-006-wire-dashboard — wire Dashboard to real `/deals` data (Board + Table view), replacing `mockDeals.ts`. Depends on phase1-004 (seed data) and phase1-005 (Deal card) — phase1-005 done.
+- [ ] phase1-006-wire-dashboard — needs a real `/deals` GET endpoint in `/backend` first (FastAPI route → service → supabase-py, per AGENT.md's one-write-path rule; none exists yet, only `/health`), then wire the frontend Dashboard to it (Board + Table view), replacing `mockDeals.ts`. Depends on phase1-004 (seed data, done) and phase1-005 (Deal card, done).
 
 ## Blocked
 - (none)
