@@ -62,7 +62,18 @@ CONTRADICTION_INSTRUCTIONS = (
 )
 
 
-def _call_and_parse(state: AnalystState, content: bytes, media_type: str, instructions: str) -> list:
+def _run_once(state: AnalystState) -> list:
+    # fetch_document + get_last_analysis are inside the retried callable
+    # deliberately — any failure in this node must convert to NodeFailure,
+    # not leak past the bounded-retry boundary (same fix as doc_summarizer,
+    # AGENT.md Section 10; caught by phase2-007's end-to-end error test).
+    content, _filename, media_type = fetch_document(state["document_id"])
+
+    instructions = BASE_INSTRUCTIONS
+    prior = get_last_analysis(state["deal_id"])
+    if prior:
+        instructions += CONTRADICTION_INSTRUCTIONS.format(prior_summary=prior["summary"])
+
     response = call_model(
         "risk_flagger",
         messages=[
@@ -95,15 +106,5 @@ def _call_and_parse(state: AnalystState, content: bytes, media_type: str, instru
 
 
 def risk_flagger(state: AnalystState) -> AnalystState:
-    content, _filename, media_type = fetch_document(state["document_id"])
-
-    instructions = BASE_INSTRUCTIONS
-    prior = get_last_analysis(state["deal_id"])
-    if prior:
-        instructions += CONTRADICTION_INSTRUCTIONS.format(prior_summary=prior["summary"])
-
-    risk_flags = with_retry(
-        "risk_flagger", lambda: _call_and_parse(state, content, media_type, instructions)
-    )
-
+    risk_flags = with_retry("risk_flagger", lambda: _run_once(state))
     return {**state, "risk_flags": risk_flags}

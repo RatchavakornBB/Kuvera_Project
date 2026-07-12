@@ -18,7 +18,13 @@ SUMMARY_PROMPT = (
 )
 
 
-def _call_and_parse(content: bytes, media_type: str) -> str:
+def _run_once(document_id: str) -> str:
+    # fetch_document is inside the retried callable deliberately — any
+    # failure in this node (fetch or model call) must convert to NodeFailure,
+    # not leak a raw exception past the bounded-retry boundary (AGENT.md
+    # Section 10; this is what phase2-007's end-to-end test caught).
+    content, _filename, media_type = fetch_document(document_id)
+
     response = call_model(
         "doc_summarizer",
         messages=[
@@ -48,6 +54,5 @@ def _call_and_parse(content: bytes, media_type: str) -> str:
 
 
 def doc_summarizer(state: AnalystState) -> AnalystState:
-    content, _filename, media_type = fetch_document(state["document_id"])
-    summary = with_retry("doc_summarizer", lambda: _call_and_parse(content, media_type))
+    summary = with_retry("doc_summarizer", lambda: _run_once(state["document_id"]))
     return {**state, "summary": summary}
