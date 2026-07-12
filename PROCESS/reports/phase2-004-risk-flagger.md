@@ -1,0 +1,9 @@
+## Result: ✅ DoD met
+
+Gate: manual verification only (still pre-LangGraph-compile, tested as plain functions per the timeline's "standalone" language). Two real end-to-end runs against real documents: (1) fresh Deal A document, no prior analysis → 8 structurally correct risk flags (3 high, 5 medium), each grounded in a real source_excerpt. (2) same deal re-analyzed against a deliberately revised document (FY2025 revenue changed $26.5M→$31.9M, growth +34%→+61%, change-of-control consent window 30→90 days) → 7 flags including exactly one contradiction flag correctly naming both changed figures.
+
+Deviations from spec: added `public.analyses` (not one of the 8 Section 3.1 models) via its own migration — necessary infrastructure for "last stored version" and for the `/analyze` endpoint's response, not scope creep (see the migration's own header comment).
+
+Bug found and fixed mid-task: the first contradiction-check test run crashed with `KeyError: 'risk_flags'` — an intermittent malformed tool_use response (the model's extended-thinking output occasionally left the JSON tool input incomplete, likely tokens-budget-related). This is exactly the failure mode AGENT.md Section 10 exists for. Built `agents/errors.py` (typed `NodeFailure`) and `agents/retry.py` (bounded 2-attempt retry) as shared infrastructure, applied to both doc_summarizer and risk_flagger, raised `max_tokens` on risk_flagger from 2048→4096, and hardened both nodes to search for the right content block type instead of assuming `content[0]`. Re-ran the same contradiction test afterward — passed cleanly.
+
+Risks: `with_retry`/`NodeFailure` exist now but nothing above the node level (the eventual `/analyze` endpoint) yet catches and reports a `NodeFailure` — that wiring is phase2-007's job. `pricing_advisor` and `ic_memo_drafter` still need the same retry treatment when built.
