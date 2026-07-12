@@ -3,6 +3,7 @@ python-multipart
 uvicorn[standard]
 langgraph
 langchain-anthropic
+anthropic
 supabase
 python-dotenv
 pytest
