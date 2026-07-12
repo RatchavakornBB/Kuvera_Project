@@ -1,8 +1,8 @@
 ## Current
 Phase: 1 (Foundations)
-Active task: none — phase1-001-design-tokens-stage-diagram closed, next task not yet started
+Active task: none — phase1-005-deal-card-kanban closed
 Status: idle, ready to pull next task
-Last checkpoint commit: (pending first commit)
+Last checkpoint commit: 9fdbec5
 Blocked on: nothing
 
 ## Next up
