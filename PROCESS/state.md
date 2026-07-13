@@ -1,15 +1,15 @@
 ## Current
-Phase: 4 (Integration) + phase1-007 (Table/Pipeline view, picked up now alongside Phase 4)
-Active task: app-shell-routing (prerequisite for everything else in this phase)
+Phase: 4 (Integration)
+Active task: phase4-001c-analysis-tab (Deal Detail Analysis tab: risk cards, IC memo, pricing)
 Status: in_progress
-Last checkpoint commit: 8c8af77
+Last checkpoint commit: 1982452
 Blocked on: nothing
 
 ## Next up
-phase1-007-table-pipeline-view, phase4-001-deal-detail (split into Overview/Documents/
-Analysis/Tasks sub-tasks), phase4-002-documents-contracts-screen, phase4-003-agent-hub,
-phase4-004-key-date-notifier, then a full integration pass. User asked to do all of
-this continuously (2026-07-13).
+phase4-001c-analysis-tab, phase4-001d-tasks-notes-tab, phase4-002-documents-contracts-screen,
+phase4-003-agent-hub, phase4-004-key-date-notifier, then a full integration pass
+(Dashboard -> Deal Detail -> Chat, uninterrupted). User asked to do all of this
+continuously (2026-07-13).
 
 ## Open questions for user
 - none currently open
