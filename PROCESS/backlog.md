@@ -188,3 +188,24 @@ exercised, not old corruption.
 
 Phase 6 (post-5-day-plan extension) is now complete, including this
 connectivity pass.
+
+Phase 7 (post-Phase-6, user-requested UI redesign) —
+
+phase7-001-chat-page-redesign — user reported the Chat page "didn't
+exist" and shared a reference screenshot of a full-page NotebookLM-
+style layout (Sources panel, mode tabs) that doesn't match
+ux-ui-spec.md 3.3's written "slide-out panel" spec. Asked clarifying
+questions before building since the mockup's Sources list implied
+multi-deal selection, conflicting with the deal_id scoping invariant
+(agents/deal_context.py). User confirmed: single-deal selection only,
+mode tabs are cosmetic (no backend routing change), build the rest of
+the mockup too. Built a real /chat page (Sources = real fetchDeals(),
+single-select), /today (real needs-attention deals + real key dates),
+/daily-digest (wraps the existing real LearningAgentTab), and a
+non-interactive "View as: Owner" badge (no fake RBAC — none exists).
+Deliberately did not add a redundant "Deals" nav item since Dashboard
+already is the deals list. Removed the now-dead ChatPanel.tsx.
+Verified a real WebSocket round-trip correctly proved the single-deal
+invariant survived the rework: asking "What deals are in the
+portfolio?" with Deal A selected as the Source produced a real refusal
+to see beyond that one deal.

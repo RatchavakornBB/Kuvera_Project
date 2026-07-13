@@ -1,18 +1,29 @@
 ## Current
-Phase 6 (post-5-day-plan extension) is now fully COMPLETE, including a mid-task
-completeness/connectivity audit the user requested (2026-07-13, in Thai) before calling it done.
-All 8 items in the user's ordered list shipped + the audit (phase6-009) found and fixed one real
-dead code path (Contracts upload had no UI) and one real latent bug it exposed
-(clause_extractor storing a stringified array instead of a real one). Nothing currently in
-progress — awaiting the user's next request.
-Active task: none
+Phase 6 (post-5-day-plan extension) is fully complete (see prior entries below). Phase 7 has now
+started: user reported the Chat page "didn't exist" and provided a reference screenshot of a
+full-page NotebookLM-style Chat interface (Sources panel, mode tabs), which doesn't match
+ux-ui-spec.md 3.3's written "slide-out panel" spec. Clarified scope first (the mockup's Sources
+list implied multi-deal selection, which conflicts with the deal_id scoping invariant), then built
+phase7-001: a real dedicated /chat page + /today + /daily-digest pages, all reusing existing real
+backend endpoints, no fabricated data or fake RBAC.
+Active task: none (phase7-001 complete)
 Status: idle
-Last checkpoint commit: d50ad5a
+Last checkpoint commit: 5cb82d1
 Blocked on: nothing
 
 ## Next up
 Nothing queued. If the user wants further work, check PROCESS/backlog.md's Done section for full
 history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+phase7-001 replaced the old slide-out ChatPanel.tsx (now deleted) with a real routed /chat page:
+Sources panel (real fetchDeals(), single-select — NOT multi-deal, per explicit user confirmation
+that the deal_id scoping invariant stays intact), 4 cosmetic mode tabs (Concierge/Analyst/
+Contracts/Drafting — placeholder/color only, real Orchestrator still does the actual routing on
+every message). Added /today (real needs-attention deals + real key dates) and /daily-digest
+(wraps the existing real LearningAgentTab). Added a non-interactive "View as: Owner" badge —
+deliberately NOT wired to fake RBAC, since none exists. Sidebar reordered to Today/Dashboard/Chat/
+Documents & Contracts/Daily Digest/Agent Hub/Admin; deliberately did NOT add a separate "Deals"
+nav item since Dashboard already is the deals list. useChatSocket() still lives in AppShell so
+message history persists across navigation.
 phase6-009 audited every backend route against every frontend api.ts caller in both directions —
 zero orphaned api.ts exports; two legitimate non-connections confirmed intentional (`/deals/{id}/ask`
 superseded by `/chat`, `/documents/backfill-embeddings` is maintenance-only); one real gap found
@@ -112,11 +123,15 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   `embed_text` per row) to catch up any that failed at write time. Frontend search input in
   DocumentsContracts.tsx is debounced 400ms since each query is now a real paid Voyage call.
 - `/chat` is request/response, not streaming (D-012).
-- Frontend routes (App.tsx): `/` (Dashboard), `/deals/:id` (Deal Detail, 4 tabs), `/documents`
-  (Documents & Contracts), `/agent-hub` (Agent Hub), `/admin` (Admin & Skill Governance, 5 tabs:
-  Agents & Models, Skills, Pending Approvals, Knowledge Base, Audit Log). TopBar's
-  NotificationBell and the Chat panel both live in AppShell (outside the routed Outlet), so their
-  state persists across navigation by design.
+- Frontend routes (App.tsx): `/` (Dashboard), `/today` (Today), `/chat` (Chat — full page, not a
+  toggle panel, since phase7-001), `/deals/:id` (Deal Detail, 4 tabs), `/documents` (Documents &
+  Contracts), `/daily-digest` (Daily Digest), `/agent-hub` (Agent Hub), `/admin` (Admin & Skill
+  Governance, 5 tabs: Agents & Models, Skills, Pending Approvals, Knowledge Base, Audit Log).
+  `useChatSocket()` lives in AppShell (outside the routed Outlet) and is passed down via
+  `ShellContext.chat` — this is why message history persists across navigation, not because Chat
+  is a panel anymore. TopBar's NotificationBell also lives in AppShell for the same reason.
+  `ShellContext` also carries `selectedDeal`/`setSelectedDeal` (the single active chat Source) and
+  `askAboutDeal(dealId, dealName)` (sets selectedDeal + navigates to `/chat`).
 - Claude Code's auto-mode permission classifier will block raw direct-DB deletes/mutations run via
   Bash that it can't verify are self-created test artifacts, even mid-session — ask the user for
   explicit sign-off before retrying rather than working around it (happened twice this session,
