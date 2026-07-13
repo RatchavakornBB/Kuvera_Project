@@ -3,10 +3,8 @@ ingest, alongside 4.2 clause_extractor (both consume the same raw
 contract, no dependency between them — unlike the Analyst Lead's gated
 3.1->3.2, these are an ingest-triggered pair per Figure 6)."""
 
-import base64
-
 from agents.adapters.model_adapter import call_model
-from agents.documents import fetch_document
+from agents.documents import build_content_block, fetch_document
 from agents.retry import with_retry
 
 SUMMARY_PROMPT = (
@@ -26,14 +24,7 @@ def _run_once(document_id: str) -> str:
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": base64.standard_b64encode(content).decode(),
-                        },
-                    },
+                    build_content_block(content, media_type),
                     {"type": "text", "text": SUMMARY_PROMPT},
                 ],
             }

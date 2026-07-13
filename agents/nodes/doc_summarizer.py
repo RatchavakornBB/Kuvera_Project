@@ -2,10 +2,8 @@
 uploaded document and produces a summary for the deal's Analyst Lead
 pipeline. First node in the gate: 3.2 risk_flagger reads its output."""
 
-import base64
-
 from agents.adapters.model_adapter import call_model
-from agents.documents import fetch_document
+from agents.documents import build_content_block, fetch_document
 from agents.retry import with_retry
 from agents.state import AnalystState
 
@@ -31,14 +29,7 @@ def _run_once(document_id: str) -> str:
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": base64.standard_b64encode(content).decode(),
-                        },
-                    },
+                    build_content_block(content, media_type),
                     {"type": "text", "text": SUMMARY_PROMPT},
                 ],
             }

@@ -1,10 +1,8 @@
 """4.2 Clause extractor — system-architecture.md Section 8. Ingest-triggered
 alongside 4.1 contract_summarizer, no dependency between them."""
 
-import base64
-
 from agents.adapters.model_adapter import call_model
-from agents.documents import fetch_document
+from agents.documents import build_content_block, fetch_document
 from agents.retry import with_retry
 
 CLAUSE_TOOL = {
@@ -46,14 +44,7 @@ def _run_once(document_id: str) -> list[dict]:
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": base64.standard_b64encode(content).decode(),
-                        },
-                    },
+                    build_content_block(content, media_type),
                     {"type": "text", "text": EXTRACT_PROMPT},
                 ],
             }

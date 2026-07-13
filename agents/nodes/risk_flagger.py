@@ -10,11 +10,9 @@ surfaced as an ordinary high-severity risk flag — no confidence scoring or
 hypothesis status, just a visible flag for the user to resolve.
 """
 
-import base64
-
 from agents.adapters.model_adapter import call_model
 from agents.analyses import get_last_analysis
-from agents.documents import fetch_document
+from agents.documents import build_content_block, fetch_document
 from agents.retry import with_retry
 from agents.state import AnalystState
 
@@ -80,14 +78,7 @@ def _run_once(state: AnalystState) -> list:
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": base64.standard_b64encode(content).decode(),
-                        },
-                    },
+                    build_content_block(content, media_type),
                     {"type": "text", "text": f"NEW SUMMARY:\n{state['summary']}\n\n{instructions}"},
                 ],
             }
