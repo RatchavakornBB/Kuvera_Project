@@ -1,6 +1,8 @@
 """4.2 Clause extractor — system-architecture.md Section 8. Ingest-triggered
 alongside 4.1 contract_summarizer, no dependency between them."""
 
+import json
+
 from agents.adapters.model_adapter import call_model
 from agents.documents import build_content_block, fetch_document
 from agents.retry import with_retry
@@ -35,6 +37,22 @@ EXTRACT_PROMPT = (
 )
 
 
+def _normalize_clauses(value: object) -> list[dict]:
+    """Claude's tool_use output for an array-typed field is usually
+    schema-conformant but not always — seen in real testing here returning a
+    JSON-encoded string (itself wrapping a redundant {"clauses": [...]} dict)
+    instead of the raw array, the same failure mode agents/knowledge.py's
+    _normalize_field already defends against for object-typed fields."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return []
+    if isinstance(value, dict) and "clauses" in value:
+        value = value["clauses"]
+    return value if isinstance(value, list) else []
+
+
 def _run_once(document_id: str) -> list[dict]:
     content, _filename, media_type = fetch_document(document_id)
 
@@ -57,7 +75,7 @@ def _run_once(document_id: str) -> list[dict]:
         if block.type == "tool_use" and block.name == "report_clauses":
             if "clauses" not in block.input:
                 raise ValueError(f"tool_use input missing 'clauses' key: {block.input!r}")
-            return block.input["clauses"]
+            return _normalize_clauses(block.input["clauses"])
 
     raise ValueError(f"model did not call report_clauses (stop_reason={response.stop_reason!r})")
 

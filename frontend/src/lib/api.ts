@@ -131,6 +131,23 @@ export async function uploadDocument(dealId: string, file: File): Promise<ApiDoc
   return res.json();
 }
 
+export interface UploadContractResult {
+  document_id: string;
+  summary: string;
+  clauses: { label: string; text: string }[];
+}
+
+export async function uploadContract(dealId: string, file: File): Promise<UploadContractResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('deal_id', dealId);
+  const res = await fetch(`${API_BASE_URL}/contracts`, { method: 'POST', body: formData });
+  if (!res.ok) {
+    throw new Error(`POST /contracts failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export interface AnalyzeResult {
   summary: string;
   risk_flags: { severity: string; description: string; source_excerpt: string }[];

@@ -1,15 +1,16 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchDeals, uploadDocument } from '../../lib/api';
+import { fetchDeals, uploadContract, uploadDocument } from '../../lib/api';
 
 export function UploadDocumentModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const { data: deals } = useQuery({ queryKey: ['deals'], queryFn: fetchDeals });
   const [dealId, setDealId] = useState('');
+  const [isContract, setIsContract] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadMutation = useMutation({
-    mutationFn: (file: File) => uploadDocument(dealId, file),
+    mutationFn: (file: File) => (isContract ? uploadContract(dealId, file) : uploadDocument(dealId, file)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       onClose();
@@ -40,6 +41,11 @@ export function UploadDocumentModal({ onClose }: { onClose: () => void }) {
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="mt-3 flex items-center gap-2 text-[11px] text-gray">
+          <input type="checkbox" checked={isContract} onChange={(e) => setIsContract(e.target.checked)} />
+          This is a contract (run clause extraction)
         </label>
 
         <button
