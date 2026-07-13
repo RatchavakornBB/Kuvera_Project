@@ -1,14 +1,13 @@
 ## Current
 Phase: 5 (Polish & Rehearsal) — started 2026-07-13 per explicit user instruction ("ไป Phase 5 เลยละกัน").
-Active task: phase5-003-demo-script
+Active task: phase5-005-cloud-deploy-decision (asking user; timeline says skip if local+screen-share is enough)
 Status: in_progress
-Last checkpoint commit: d2136b7
-Blocked on: nothing
+Last checkpoint commit: 2e91c9f
+Blocked on: user decision on whether to pursue the optional cloud deploy block
 
 ## Next up
-phase5-003-demo-script, phase5-004-rehearsal, then a decision (ask user) on the optional
-cloud deploy block — 5day-build-timeline.md explicitly says skip it if local + screen-share
-is sufficient. phase5-admin-skill-governance stays a separate open backlog question
+Awaiting user's answer on cloud deploy scope. Once resolved, Phase 5 (and the whole 5-day
+build) is complete. phase5-admin-skill-governance stays a separate open backlog question
 (design-only candidate), not pulled into this pass unless the user asks.
 
 ## Open questions for user
