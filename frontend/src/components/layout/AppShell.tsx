@@ -23,7 +23,7 @@ export function AppShell() {
     <div className="flex h-screen flex-col bg-terminal-black text-[#e7e7ea]">
       <TopBar onToggleChat={() => setChatOpen((v) => !v)} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
+        <Sidebar chatOpen={chatOpen} onToggleChat={() => setChatOpen((v) => !v)} />
         <div className="min-w-0 flex-1 overflow-y-auto">
           <Outlet context={{ askAboutDeal } satisfies ShellContext} />
         </div>
