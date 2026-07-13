@@ -1,8 +1,8 @@
 # PROCESS/backlog.md — ready / blocked / deferred work
 
 ## Ready
-- [ ] full-integration-pass — click through Dashboard -> Deal Detail -> Documents & Contracts -> Agent Hub -> Chat as one uninterrupted flow, fix any broken links/state between screens.
 - [ ] phase5-admin-skill-governance — Admin & Skill Governance screen (design-only candidate — check with user whether this stays design-only per the MVP scope table before building).
+- [ ] Phase 5 (Polish & Rehearsal) per 5day-build-timeline.md — not started: bug-fixing pass, visual polish (empty/loading states), demo script, rehearsal, optional cloud deploy.
 
 ## Blocked
 - (none)
@@ -64,3 +64,8 @@ phase4-004-key-date-notifier — on-demand GET /notifications/key-dates (no
 task-queue infra in this MVP, so not a true scheduled job — logged as a
 deliberate decision) + a persistent NotificationBell in TopBar, visible on
 every screen, with real badge count and localStorage-backed per-item dismiss.
+
+phase4-005-full-integration-pass — one continuous real-browser session across
+the whole demo path (Dashboard views -> Deal Detail all 4 tabs -> Chat ->
+Documents & Contracts -> Agent Hub -> back). No breakage found; zero console
+errors. Phase 4 (Integration) is now complete.

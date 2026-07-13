@@ -1,15 +1,16 @@
 ## Current
-Phase: 4 (Integration)
-Active task: full-integration-pass (Dashboard -> Deal Detail -> Chat, uninterrupted)
-Status: in_progress
-Last checkpoint commit: 8dab695
+Phase: 4 (Integration) — COMPLETE. Phase 5 (Polish & Rehearsal) not yet started.
+Active task: none — awaiting direction on Phase 5
+Status: idle
+Last checkpoint commit: 53e2a98 (will update after this close-out commit)
 Blocked on: nothing
 
 ## Next up
-Full integration pass: click through Dashboard -> Deal Detail (all 4 tabs) -> Documents
-& Contracts -> Agent Hub -> Chat as one uninterrupted flow, fix any broken links/state.
-This is the last item before Phase 4 is complete (5day-build-timeline.md's final Phase 4
-block, 16:00-17:30). User asked to do all of this continuously (2026-07-13).
+Phase 5 per 5day-build-timeline.md: bug-fixing pass, visual polish (empty/loading states),
+demo script, rehearsal, optional cloud deploy. Also open: phase5-admin-skill-governance
+(design-only candidate — needs a user decision on whether to build it at all). Nothing
+started yet; awaiting user direction since the explicit "Phase 4 + phase1-007" instruction
+is now fully done.
 
 ## Open questions for user
 - none currently open
