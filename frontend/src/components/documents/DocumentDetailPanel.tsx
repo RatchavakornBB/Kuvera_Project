@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import type { ApiDocumentWithDeal } from '../../lib/api';
+import { documentDownloadUrl, type ApiDocumentWithDeal } from '../../lib/api';
 
 export function DocumentDetailPanel({
   document,
@@ -51,10 +51,19 @@ export function DocumentDetailPanel({
         )}
       </div>
 
-      <div>
+      <div className="mb-3">
         <div className="mb-1 text-[9.5px] uppercase tracking-wide text-gray">Status</div>
         <div className="text-[11px] capitalize text-[#e7e7ea]">{document.status.replace('_', ' ')}</div>
       </div>
+
+      {document.storage_path && (
+        <a
+          href={documentDownloadUrl(document.id)}
+          className="inline-block rounded border border-grid px-2.5 py-1 text-[10.5px] text-blue no-underline"
+        >
+          Download file ↓
+        </a>
+      )}
     </div>
   );
 }

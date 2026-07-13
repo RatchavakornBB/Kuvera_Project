@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routes import agent_hub, analyze, chat, concierge, contracts, deals, documents, governance, knowledge, learning, notifications
+from app.routes import agent_hub, analyze, chat, concierge, contracts, deals, documents, drafting, governance, knowledge, learning, notifications
 
 app = FastAPI(title="Kuvera Capital API")
 
@@ -36,6 +36,7 @@ app.include_router(notifications.router)
 app.include_router(governance.router)
 app.include_router(knowledge.router)
 app.include_router(learning.router)
+app.include_router(drafting.router)
 
 
 @app.get("/health")

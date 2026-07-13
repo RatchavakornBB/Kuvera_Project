@@ -74,6 +74,18 @@ def get_document(document_id: str) -> dict[str, Any] | None:
     return res.data[0] if res.data else None
 
 
+def download_document(document_id: str) -> tuple[bytes, str] | None:
+    """Backend-mediated download — the Storage bucket is private on purpose
+    (no direct public URLs, per the bucket migration's own note), so every
+    download goes through here rather than a client-side signed URL."""
+    doc = get_document(document_id)
+    if doc is None or not doc.get("storage_path"):
+        return None
+    client = get_client()
+    content = client.storage.from_(BUCKET).download(doc["storage_path"])
+    return content, doc["name"]
+
+
 def get_latest_document(deal_id: str) -> dict[str, Any] | None:
     client = get_client()
     res = (

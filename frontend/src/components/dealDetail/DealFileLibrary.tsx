@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { uploadDocument, type ApiDocument } from '../../lib/api';
+import { documentDownloadUrl, uploadDocument, type ApiDocument } from '../../lib/api';
 
 const STATUS_COLOR: Record<ApiDocument['status'], string> = {
   requested: 'var(--color-amber)',
@@ -55,6 +55,15 @@ export function DealFileLibrary({ dealId, documents }: { dealId: string; documen
             <div className="shrink-0 text-[9.5px] capitalize" style={{ color: STATUS_COLOR[doc.status] }}>
               {doc.status.replace('_', ' ')}
             </div>
+            {doc.storage_path && (
+              <a
+                href={documentDownloadUrl(doc.id)}
+                className="shrink-0 text-[10px] text-blue no-underline"
+                title={`Download ${doc.name}`}
+              >
+                ↓
+              </a>
+            )}
           </div>
         ))}
       </div>

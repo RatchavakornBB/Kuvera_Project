@@ -10,3 +10,5 @@ supabase
 python-dotenv
 pytest
 httpx
+python-docx
+python-pptx

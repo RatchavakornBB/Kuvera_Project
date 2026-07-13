@@ -5,6 +5,7 @@ import { RiskFlagCards } from './RiskFlagCards';
 import { IcMemoPanel } from './IcMemoPanel';
 import { PricingSection } from './PricingSection';
 import { ContradictionsPanel } from './ContradictionsPanel';
+import { DraftingLeadPanel } from './DraftingLeadPanel';
 
 export function AnalysisTab({ deal }: { deal: ApiDealDetail }) {
   const queryClient = useQueryClient();
@@ -89,6 +90,7 @@ export function AnalysisTab({ deal }: { deal: ApiDealDetail }) {
             isRegenerating={analyzeMutation.isPending}
           />
           <PricingSection pricingNote={displayed.pricing_note} pricingError={displayed.pricing_error} />
+          <DraftingLeadPanel dealId={deal.id} />
         </>
       )}
     </div>

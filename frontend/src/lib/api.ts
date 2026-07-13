@@ -290,6 +290,34 @@ export async function resolveContradiction(
   return res.json();
 }
 
+export function documentDownloadUrl(documentId: string): string {
+  return `${API_BASE_URL}/documents/${documentId}/download`;
+}
+
+export async function draftMemo(dealId: string): Promise<ApiDocument> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/draft/memo`, { method: 'POST' });
+  if (!res.ok) throw new Error(`POST draft memo failed: ${res.status}`);
+  return res.json();
+}
+
+export async function draftDeck(dealId: string): Promise<ApiDocument> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/draft/deck`, { method: 'POST' });
+  if (!res.ok) throw new Error(`POST draft deck failed: ${res.status}`);
+  return res.json();
+}
+
+export async function draftEmail(dealId: string): Promise<{ email: string }> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/draft/email`, { method: 'POST' });
+  if (!res.ok) throw new Error(`POST draft email failed: ${res.status}`);
+  return res.json();
+}
+
+export async function draftSourceCitedSummary(dealId: string): Promise<{ summary: string }> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/draft/summary`, { method: 'POST' });
+  if (!res.ok) throw new Error(`POST draft summary failed: ${res.status}`);
+  return res.json();
+}
+
 export interface ApiLearningDigest {
   id: string;
   category: 'ma_training_data' | 'prediction_models' | 'market_news' | 'law_regulation';
