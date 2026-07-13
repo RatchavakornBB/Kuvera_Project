@@ -4,6 +4,7 @@ from app.services import deals as deals_service
 from app.services import documents as documents_service
 
 router = APIRouter(prefix="/deals", tags=["documents"])
+library_router = APIRouter(prefix="/documents", tags=["documents"])
 
 
 @router.post("/{deal_id}/documents")
@@ -18,3 +19,8 @@ async def upload_document(deal_id: str, file: UploadFile):
         content=content,
         content_type=file.content_type or "application/octet-stream",
     )
+
+
+@library_router.get("")
+def list_documents(deal_id: str | None = None, type: str | None = None, status: str | None = None, q: str | None = None):
+    return documents_service.list_documents(deal_id=deal_id, doc_type=type, status=status, q=q)

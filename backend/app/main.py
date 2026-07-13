@@ -26,6 +26,7 @@ app.add_middleware(
 
 app.include_router(deals.router)
 app.include_router(documents.router)
+app.include_router(documents.library_router)
 app.include_router(analyze.router)
 app.include_router(contracts.router)
 app.include_router(concierge.router)

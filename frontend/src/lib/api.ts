@@ -100,6 +100,27 @@ export async function createDeal(body: { name: string; client: string; industrie
   return res.json();
 }
 
+export interface ApiDocumentWithDeal extends ApiDocument {
+  deal: { id: string; name: string } | null;
+}
+
+export async function fetchDocuments(params: {
+  deal_id?: string;
+  type?: string;
+  status?: string;
+  q?: string;
+}): Promise<ApiDocumentWithDeal[]> {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) search.set(key, value);
+  }
+  const res = await fetch(`${API_BASE_URL}/documents?${search.toString()}`);
+  if (!res.ok) {
+    throw new Error(`GET /documents failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function uploadDocument(dealId: string, file: File): Promise<ApiDocument> {
   const formData = new FormData();
   formData.append('file', file);
