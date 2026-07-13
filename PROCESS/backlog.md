@@ -143,5 +143,17 @@ not a cron" deviation from phase4-004/phase6-002. Also found and fixed
 two stale demo-script.md entries (Agent Hub, Learning Agent) still
 describing pre-phase6-003/005 state.
 
-Eval pass-rate bar remains the one piece of the Admin spec not built —
-no eval framework exists anywhere in this codebase (see phase6-007).
+phase6-007-eval-framework — real minimal eval framework (agents/evals.py):
+hand-written eval cases for 3 agents (pricing_advisor, ic_memo_drafter,
+risk_flagger), real LLM-as-judge grading (a second real Claude call),
+real on-demand pass-rate bar in Pending Approvals. Proved the grader can
+actually fail (direct FAIL-proof against an unsatisfiable criteria) and
+found a genuine model-robustness result during adversarial-skill
+testing. Found and fixed four more stale demo-script.md rows (Knowledge
+Agent's Industry/Competitor Insight, Learning Agent, Drafting Lead,
+contradiction engine) while re-reading the whole Live-vs-Design-only
+table.
+
+Documents & Contracts semantic search (real pgvector, replacing the
+substring search) is the one remaining item in the user's ordered
+phase 6 list — see phase6-008.

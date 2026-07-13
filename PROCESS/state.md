@@ -2,18 +2,25 @@
 Phase 6 (post-5-day-plan extension) is in progress: user asked to build out the remaining
 Design-only gaps in this explicit order — [1] Contradiction/Hypothesis engine (done),
 [2] Knowledge Agent Industry/Competitor Briefs (done), [3] Learning Agent (done), [4] Drafting
-Lead, [5] Agent Hub full view, [6] Key-date notifier true cron, [7] Eval pass-rate bar,
-[8] Documents & Contracts semantic search. Proceeding through the list without per-item
-re-confirmation per the user's instruction — only stopping to ask when something is a genuine
-blocker (e.g. needed a real API key for phase5-009's Voyage embeddings).
-Active task: phase6-007-eval-framework (next in the ordered list)
+Lead (done), [5] Agent Hub full view (done), [6] Key-date notifier true cron (done), [7] Eval
+pass-rate bar (done), [8] Documents & Contracts semantic search. Proceeding through the list
+without per-item re-confirmation per the user's instruction — only stopping to ask when something
+is a genuine blocker (e.g. needed a real API key for phase5-009's Voyage embeddings).
+Active task: phase6-008-documents-semantic-search (last item in the ordered list)
 Status: in_progress
-Last checkpoint commit: bf08aad
+Last checkpoint commit: df70fcb
 Blocked on: nothing
 
 ## Next up
-phase6-007 (Eval pass-rate bar in Admin) then phase6-008 (Documents & Contracts semantic search) —
-last two items in the user's ordered list.
+phase6-008 (Documents & Contracts semantic search) — last item in the user's ordered list. Plan:
+add an `embedding` column to `documents`, embed on upload/summary-update reusing the existing
+Voyage AI infra from `agents/knowledge.py`, add a cosine-search path parallel to
+`search_knowledge()`, replace `list_documents()`'s substring search in
+`backend/app/services/documents.py`.
+phase6-007 built agents/evals.py: real hand-written eval cases for 3 agents (pricing_advisor,
+ic_memo_drafter, risk_flagger), real LLM-as-judge grading (a second real Claude call), pass_rate
+stored on pending_changes and shown as a real green/red bar (0.7 threshold) in Pending Approvals.
+Agents without eval cases report that honestly rather than faking a score.
 phase6-006 built a real backend/app/scheduler.py (BackgroundScheduler, wired to FastAPI startup/
 shutdown): key_date_check every 5min, industry_brief_refresh every 24h. Learning Agent stays
 on-demand deliberately (needs a real topic). Real `scheduled_run_log` table is the audit trail.
@@ -52,7 +59,10 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   `/notifications/key-dates`, `/admin/agents` + `/admin/agents/{name}/propose` +
   `/admin/pending-approvals` (+ `/approve` / `/reject`) + `/admin/audit-log`,
   `/admin/knowledge-base` (+ `/search`, `/refresh-industry-brief`, `/refresh-competitor-brief`),
-  `/deals/{id}/contradictions` (+ `/{id}/resolve`), `/admin/learning` (`/run`, `/digests`).
+  `/deals/{id}/contradictions` (+ `/{id}/resolve`), `/admin/learning` (`/run`, `/digests`),
+  `/admin/pending-approvals/{id}/run-eval`, `/admin/scheduler/status` + `/runs`,
+  `/agent-hub/grid` + `/agents/{name}` + `/graph/analyst-lead`,
+  `/deals/{id}/draft/{memo,deck,email,summary}`, `/documents/{id}/download`.
   `sys.path` self-bootstraps (D-009). Verified: mixing Claude's `web_search` server tool with a
   custom structured-output tool in one call works (agents/learning_agent.py) — untested before
   phase6-003, don't assume it doesn't work if reconsidering agents/industry_brief.py's
@@ -68,6 +78,10 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   `POST /deals/{id}/close`) and `search_knowledge()` / `historical_precedent_context()` (real
   pgvector cosine search, the latter used inside risk_flagger/pricing_advisor, best-effort/
   swallows its own failures since it's supplementary context).
+- `agents/evals.py`: real eval cases only exist for pricing_advisor, ic_memo_drafter, risk_flagger
+  — `run_eval()` returns `pass_rate: None` honestly for any other agent rather than faking a score.
+  Grading is a real second Claude call (`_grade()`), not a keyword/string match — don't replace it
+  with something cheaper without re-verifying it can still produce a real FAIL.
 - `/chat` is request/response, not streaming (D-012).
 - Frontend routes (App.tsx): `/` (Dashboard), `/deals/:id` (Deal Detail, 4 tabs), `/documents`
   (Documents & Contracts), `/agent-hub` (Agent Hub), `/admin` (Admin & Skill Governance, 5 tabs:
