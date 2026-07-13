@@ -2,7 +2,7 @@
 Phase: 5 (Polish & Rehearsal) — COMPLETE 2026-07-13. The entire 5-day build plan is now done.
 Active task: none
 Status: idle
-Last checkpoint commit: a338a50 (will update after this close-out commit)
+Last checkpoint commit: 2252b95
 Blocked on: nothing
 
 ## Next up
