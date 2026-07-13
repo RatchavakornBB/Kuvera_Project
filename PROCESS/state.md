@@ -1,16 +1,15 @@
 ## Current
 Phase: 5 (Polish & Rehearsal) — started 2026-07-13 per explicit user instruction ("ไป Phase 5 เลยละกัน").
-Active task: phase5-001-bug-fixing-pass
+Active task: phase5-003-demo-script
 Status: in_progress
-Last checkpoint commit: f09e5b8
+Last checkpoint commit: d2136b7
 Blocked on: nothing
 
 ## Next up
-phase5-001-bug-fixing-pass, phase5-002-visual-polish, phase5-003-demo-script,
-phase5-004-rehearsal, then a decision (ask user) on the optional cloud deploy block —
-5day-build-timeline.md explicitly says skip it if local + screen-share is sufficient.
-phase5-admin-skill-governance stays a separate open backlog question (design-only
-candidate), not pulled into this pass unless the user asks.
+phase5-003-demo-script, phase5-004-rehearsal, then a decision (ask user) on the optional
+cloud deploy block — 5day-build-timeline.md explicitly says skip it if local + screen-share
+is sufficient. phase5-admin-skill-governance stays a separate open backlog question
+(design-only candidate), not pulled into this pass unless the user asks.
 
 ## Open questions for user
 - none currently open
