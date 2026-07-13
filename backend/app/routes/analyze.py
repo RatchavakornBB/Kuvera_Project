@@ -12,6 +12,13 @@ class AnalyzeRequest(BaseModel):
     document_id: str
 
 
+@router.get("/{deal_id}/analysis")
+def get_latest_analysis(deal_id: str):
+    if deals_service.get_deal(deal_id) is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    return analyze_service.get_latest_analysis(deal_id)
+
+
 @router.post("/{deal_id}/analyze")
 def analyze_deal(deal_id: str, body: AnalyzeRequest):
     if deals_service.get_deal(deal_id) is None:

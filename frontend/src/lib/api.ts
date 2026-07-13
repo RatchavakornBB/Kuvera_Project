@@ -130,3 +130,16 @@ export async function analyzeDocument(dealId: string, documentId: string): Promi
   }
   return res.json();
 }
+
+export interface ApiAnalysis extends AnalyzeResult {
+  document_id: string;
+  created_at: string;
+}
+
+export async function fetchLatestAnalysis(dealId: string): Promise<ApiAnalysis | null> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/analysis`);
+  if (!res.ok) {
+    throw new Error(`GET /deals/${dealId}/analysis failed: ${res.status}`);
+  }
+  return res.json();
+}
