@@ -4,6 +4,8 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { DealDetailHeader } from '../components/dealDetail/DealDetailHeader';
 import { DealDetailTabs, type DealTab } from '../components/dealDetail/DealDetailTabs';
 import { OverviewTab } from '../components/dealDetail/OverviewTab';
+import { RequiredDocumentsChecklist } from '../components/dealDetail/RequiredDocumentsChecklist';
+import { DealFileLibrary } from '../components/dealDetail/DealFileLibrary';
 import { AskAboutDealPanel } from '../components/dealDetail/AskAboutDealPanel';
 import { fetchDeal } from '../lib/api';
 import type { ShellContext } from '../components/layout/AppShell';
@@ -35,7 +37,12 @@ export function DealDetail() {
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
           {tab === 'overview' && <OverviewTab deal={deal} />}
-          {tab === 'documents' && <div className="text-xs text-gray">Documents tab — coming next.</div>}
+          {tab === 'documents' && (
+            <div className="flex flex-col gap-4">
+              <RequiredDocumentsChecklist items={deal.dd_items} />
+              <DealFileLibrary dealId={deal.id} documents={deal.documents} />
+            </div>
+          )}
           {tab === 'analysis' && <div className="text-xs text-gray">Analysis tab — coming next.</div>}
           {tab === 'tasks' && <div className="text-xs text-gray">Tasks & Notes tab — coming next.</div>}
         </div>
