@@ -4,14 +4,16 @@ import { SkillsTab } from '../components/admin/SkillsTab';
 import { PendingApprovalsTab } from '../components/admin/PendingApprovalsTab';
 import { AuditLogTab } from '../components/admin/AuditLogTab';
 import { KnowledgeBaseTab } from '../components/admin/KnowledgeBaseTab';
+import { LearningAgentTab } from '../components/admin/LearningAgentTab';
 
-type AdminTab = 'agents' | 'skills' | 'pending' | 'audit' | 'knowledge';
+type AdminTab = 'agents' | 'skills' | 'pending' | 'audit' | 'knowledge' | 'learning';
 
 const TABS: { key: AdminTab; label: string }[] = [
   { key: 'agents', label: 'Agents & Models' },
   { key: 'skills', label: 'Skills' },
   { key: 'pending', label: 'Pending Approvals' },
   { key: 'knowledge', label: 'Knowledge Base' },
+  { key: 'learning', label: 'Learning Agent' },
   { key: 'audit', label: 'Audit Log' },
 ];
 
@@ -26,8 +28,10 @@ export function AdminGovernance() {
           Real, DB-backed configuration — approved changes here affect the next real Claude API
           call for that agent. The Knowledge Base tab is real too: closing a deal promotes its
           actual data into pgvector-embedded records that risk_flagger/pricing_advisor retrieve as
-          historical precedent. Eval pass-rate scoring isn't built (no eval framework exists yet),
-          so that part of the design spec isn't shown here.
+          historical precedent, and Industry/Competitor Briefs there use real web search. The
+          Learning Agent tab runs real outside-world research and can propose real skill changes
+          into the same Pending Approvals queue. Eval pass-rate scoring isn't built (no eval
+          framework exists yet), so that part of the design spec isn't shown here.
         </div>
       </div>
 
@@ -49,6 +53,7 @@ export function AdminGovernance() {
       {tab === 'skills' && <SkillsTab />}
       {tab === 'pending' && <PendingApprovalsTab />}
       {tab === 'knowledge' && <KnowledgeBaseTab />}
+      {tab === 'learning' && <LearningAgentTab />}
       {tab === 'audit' && <AuditLogTab />}
     </div>
   );

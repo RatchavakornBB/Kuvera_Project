@@ -290,6 +290,34 @@ export async function resolveContradiction(
   return res.json();
 }
 
+export interface ApiLearningDigest {
+  id: string;
+  category: 'ma_training_data' | 'prediction_models' | 'market_news' | 'law_regulation';
+  topic: string;
+  digest: string;
+  proposed_change_id: string | null;
+  created_at: string;
+}
+
+export async function runLearningCycle(category: string, topic: string): Promise<ApiLearningDigest> {
+  const res = await fetch(`${API_BASE_URL}/admin/learning/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category, topic }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(`POST /admin/learning/run failed: ${res.status} ${body ? JSON.stringify(body.detail) : ''}`);
+  }
+  return res.json();
+}
+
+export async function fetchLearningDigests(): Promise<ApiLearningDigest[]> {
+  const res = await fetch(`${API_BASE_URL}/admin/learning/digests`);
+  if (!res.ok) throw new Error(`GET /admin/learning/digests failed: ${res.status}`);
+  return res.json();
+}
+
 export interface ApiKnowledgeRecord {
   id: string;
   source_deal_id: string | null;
