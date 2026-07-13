@@ -168,5 +168,23 @@ path would have returned the raw embedding vector) and debounced the
 frontend search input (400ms) since it now drives a real paid API call
 per query.
 
-This closes the last item in the user's ordered phase 6 list — Phase 6
-(post-5-day-plan extension) is now complete.
+This closes the last item in the user's ordered phase 6 list.
+
+phase6-009-fullstack-connectivity-audit — user-requested audit
+cross-referencing every backend route against every frontend api.ts
+caller in both directions. Zero orphaned api.ts exports. Found and
+fixed one real gap: POST /contracts (the 4.1/4.2 Contracts Lead
+pipeline) had no frontend caller anywhere — the only Contract-type
+document in the system was hand-seeded, never produced by a real user
+action. Wired up a "This is a contract" checkbox in
+UploadDocumentModal.tsx, which immediately caught a real,
+previously-latent bug: clause_extractor.py stored a stringified
+{"clauses": [...]} wrapper instead of a real array on its first-ever
+live invocation. Fixed with _normalize_clauses(), mirroring
+agents/knowledge.py's existing defense for the same class of Claude
+tool_use quirk. Confirmed via the seed data's clean clauses column
+that this was a live-pipeline bug the seed data had simply never
+exercised, not old corruption.
+
+Phase 6 (post-5-day-plan extension) is now complete, including this
+connectivity pass.

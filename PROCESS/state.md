@@ -1,20 +1,29 @@
 ## Current
-Phase 6 (post-5-day-plan extension) is now COMPLETE: the user's explicit 8-item ordered list is
-fully done — [1] Contradiction/Hypothesis engine, [2] Knowledge Agent Industry/Competitor Briefs,
-[3] Learning Agent, [4] Drafting Lead, [5] Agent Hub full view, [6] Key-date notifier true cron,
-[7] Eval pass-rate bar, [8] Documents & Contracts semantic search — all shipped, verified, and
-committed. Next: user asked mid-task for a full frontend/backend completeness + connectivity audit
-before considering this extension finished (2026-07-13, in Thai) — that audit is the current work.
-Active task: full-stack completeness/connectivity audit (not yet a numbered phase task — a
-verification pass, not new feature work)
-Status: in_progress
-Last checkpoint commit: 1ecb5da
+Phase 6 (post-5-day-plan extension) is now fully COMPLETE, including a mid-task
+completeness/connectivity audit the user requested (2026-07-13, in Thai) before calling it done.
+All 8 items in the user's ordered list shipped + the audit (phase6-009) found and fixed one real
+dead code path (Contracts upload had no UI) and one real latent bug it exposed
+(clause_extractor storing a stringified array instead of a real one). Nothing currently in
+progress — awaiting the user's next request.
+Active task: none
+Status: idle
+Last checkpoint commit: d50ad5a
 Blocked on: nothing
 
 ## Next up
-Full frontend/backend audit: confirm every backend route has a real frontend caller and every
-frontend API call hits a real, wired-up backend route — no orphaned endpoints on either side.
-Report findings in Thai per the user's standing preference.
+Nothing queued. If the user wants further work, check PROCESS/backlog.md's Done section for full
+history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+phase6-009 audited every backend route against every frontend api.ts caller in both directions —
+zero orphaned api.ts exports; two legitimate non-connections confirmed intentional (`/deals/{id}/ask`
+superseded by `/chat`, `/documents/backfill-embeddings` is maintenance-only); one real gap found
+and fixed (`POST /contracts` had no UI — added the "This is a contract" checkbox to
+UploadDocumentModal.tsx + uploadContract() in api.ts). Wiring it up immediately caught a real bug:
+clause_extractor.py stored a stringified `{"clauses": [...]}` wrapper instead of a real array on
+its first-ever live invocation (Claude occasionally returns a JSON string for an array-typed
+tool_use field — the exact failure mode agents/knowledge.py's _normalize_field already handles for
+object fields, never applied here). Fixed with `_normalize_clauses()`. Confirmed via the seed
+Contract doc's clean data that this was a live-pipeline bug, not old corruption — seed.sql bypassed
+the buggy path entirely.
 phase6-008 built real pgvector search for documents.py (embedding vector(1024) column, reuses
 agents/embeddings.py's Voyage AI pipeline — no second embeddings integration). Embed on upload
 (filename) + re-embed on summary landing (name+summary), real cosine query replacing the old
@@ -89,6 +98,11 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   — `run_eval()` returns `pass_rate: None` honestly for any other agent rather than faking a score.
   Grading is a real second Claude call (`_grade()`), not a keyword/string match — don't replace it
   with something cheaper without re-verifying it can still produce a real FAIL.
+- `agents/nodes/clause_extractor.py`: `_normalize_clauses()` defends against Claude returning a
+  JSON-encoded string (sometimes a redundantly-nested `{"clauses": [...]}`) instead of a raw array
+  for the tool_use "clauses" field — found via real live testing in phase6-009, the array-typed
+  counterpart to `agents/knowledge.py::_normalize_field`'s object-typed defense. Don't remove this
+  thinking it's dead defensive code; it fired on the very first real end-to-end contract upload.
 - `backend/app/services/documents.py`: `documents.embedding` (Voyage, same pipeline as
   knowledge_base) is embedded on upload (filename) and re-embedded on summary landing
   (name+summary). Every read path uses the explicit `DOCUMENT_COLUMNS` list, never `select("*")` —
