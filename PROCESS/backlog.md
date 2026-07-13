@@ -154,6 +154,19 @@ Agent's Industry/Competitor Insight, Learning Agent, Drafting Lead,
 contradiction engine) while re-reading the whole Live-vs-Design-only
 table.
 
-Documents & Contracts semantic search (real pgvector, replacing the
-substring search) is the one remaining item in the user's ordered
-phase 6 list — see phase6-008.
+phase6-008-documents-semantic-search — real pgvector cosine search for
+the Documents & Contracts screen, reusing knowledge_base's exact Voyage
+AI pipeline (documents.embedding vector(1024)). Embedded on upload
+(filename) and re-embedded once a real summary lands. Found and fixed a
+real bug: backfill_missing_embeddings() initially hit the same
+per-record-loop 429 anti-pattern already documented in
+agents/embeddings.py (and hit for real in phase5-009) — fixed to batch
+via embed_texts(). Verified the failure mode degrades gracefully under
+a real rate limit hit mid-`/deals/{id}/analyze` run, then recovers via
+the fixed backfill. Also fixed a response leak (every select("*") read
+path would have returned the raw embedding vector) and debounced the
+frontend search input (400ms) since it now drives a real paid API call
+per query.
+
+This closes the last item in the user's ordered phase 6 list — Phase 6
+(post-5-day-plan extension) is now complete.
