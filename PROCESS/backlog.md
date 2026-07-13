@@ -1,7 +1,6 @@
 # PROCESS/backlog.md — ready / blocked / deferred work
 
 ## Ready
-- [ ] phase4-001d-tasks-notes-tab — Deal Detail Tasks & Notes tab, real tasks/meeting_notes data.
 - [ ] phase4-002-documents-contracts-screen — the dedicated Documents & Contracts screen (search, filter, document detail side panel) — separate from the per-deal Documents tab.
 - [ ] phase4-003-agent-hub — static activity log table. Real data to read now exists: LangGraph's `checkpoints`/`checkpoint_writes` tables (Postgres Checkpointer, live since Phase 2) actually recorded every node run across all the Phase 2/3 testing.
 - [ ] phase4-004-key-date-notifier — 4.3 Key-date notifier (system-architecture.md Section 8), deferred out of phase3-001 since it's explicitly a "scheduled background check," different infrastructure than the ingest-triggered 4.1/4.2.
@@ -45,4 +44,7 @@ plus fixing the previously-deferred hardcoded risk_flags=0 now that real risk_fl
 data exists), phase4-001a-deal-detail-overview, phase4-001b-documents-tab (required
 docs checklist + file library wired to real upload), phase4-001c-analysis-tab (risk
 flag cards grouped by severity, IC memo panel with Regenerate, collapsed pricing
-section, new GET /deals/{id}/analysis endpoint to hydrate without a fresh LLM run).
+section, new GET /deals/{id}/analysis endpoint to hydrate without a fresh LLM run),
+phase4-001d-tasks-notes-tab (task list with quick-add/done-toggle backed by new
+POST/PATCH /deals/{id}/tasks, chronological meeting notes feed). Deal Detail's all
+4 tabs (Overview/Documents/Analysis/Tasks & Notes) are now complete.
