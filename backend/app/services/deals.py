@@ -78,6 +78,22 @@ def create_deal(name: str, client_name: str, industries: list[str], owner_id: st
     return res.data[0]
 
 
+def create_task(deal_id: str, text: str, owner_id: str | None, due_date: str | None) -> dict[str, Any]:
+    client = get_client()
+    res = (
+        client.table("tasks")
+        .insert({"deal_id": deal_id, "text": text, "owner_id": owner_id, "due_date": due_date})
+        .execute()
+    )
+    return res.data[0]
+
+
+def update_task(deal_id: str, task_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
+    client = get_client()
+    res = client.table("tasks").update(fields).eq("id", task_id).eq("deal_id", deal_id).execute()
+    return res.data[0] if res.data else None
+
+
 def get_deal(deal_id: str) -> dict[str, Any] | None:
     client = get_client()
     res = client.table("deals").select(_DEAL_SELECT).eq("id", deal_id).execute()

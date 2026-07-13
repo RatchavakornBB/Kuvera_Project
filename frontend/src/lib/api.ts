@@ -143,3 +143,34 @@ export async function fetchLatestAnalysis(dealId: string): Promise<ApiAnalysis |
   }
   return res.json();
 }
+
+export async function createTask(
+  dealId: string,
+  body: { text: string; owner_id?: string | null; due_date?: string | null },
+): Promise<ApiTask> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/tasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`POST /deals/${dealId}/tasks failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function updateTask(
+  dealId: string,
+  taskId: string,
+  body: { done?: boolean; text?: string; due_date?: string | null },
+): Promise<ApiTask> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`PATCH /deals/${dealId}/tasks/${taskId} failed: ${res.status}`);
+  }
+  return res.json();
+}

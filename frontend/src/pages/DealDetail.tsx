@@ -7,6 +7,8 @@ import { OverviewTab } from '../components/dealDetail/OverviewTab';
 import { RequiredDocumentsChecklist } from '../components/dealDetail/RequiredDocumentsChecklist';
 import { DealFileLibrary } from '../components/dealDetail/DealFileLibrary';
 import { AnalysisTab } from '../components/dealDetail/AnalysisTab';
+import { TaskList } from '../components/dealDetail/TaskList';
+import { MeetingNotesFeed } from '../components/dealDetail/MeetingNotesFeed';
 import { AskAboutDealPanel } from '../components/dealDetail/AskAboutDealPanel';
 import { fetchDeal } from '../lib/api';
 import type { ShellContext } from '../components/layout/AppShell';
@@ -45,7 +47,12 @@ export function DealDetail() {
             </div>
           )}
           {tab === 'analysis' && <AnalysisTab deal={deal} />}
-          {tab === 'tasks' && <div className="text-xs text-gray">Tasks & Notes tab — coming next.</div>}
+          {tab === 'tasks' && (
+            <div className="flex flex-col gap-4">
+              <TaskList dealId={deal.id} tasks={deal.tasks} />
+              <MeetingNotesFeed notes={deal.meeting_notes} />
+            </div>
+          )}
         </div>
         <AskAboutDealPanel dealName={deal.name} onAsk={() => askAboutDeal(deal.id, deal.name)} />
       </div>
