@@ -12,3 +12,4 @@ pytest
 httpx
 python-docx
 python-pptx
+apscheduler

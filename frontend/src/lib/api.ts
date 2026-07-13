@@ -290,6 +290,31 @@ export async function resolveContradiction(
   return res.json();
 }
 
+export interface ApiSchedulerJob {
+  id: string;
+  next_run_time: string | null;
+}
+
+export interface ApiScheduledRun {
+  id: string;
+  job_name: string;
+  status: 'success' | 'error';
+  detail: string | null;
+  started_at: string;
+}
+
+export async function fetchSchedulerStatus(): Promise<{ jobs: ApiSchedulerJob[] }> {
+  const res = await fetch(`${API_BASE_URL}/admin/scheduler/status`);
+  if (!res.ok) throw new Error(`GET /admin/scheduler/status failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchScheduledRuns(): Promise<ApiScheduledRun[]> {
+  const res = await fetch(`${API_BASE_URL}/admin/scheduler/runs`);
+  if (!res.ok) throw new Error(`GET /admin/scheduler/runs failed: ${res.status}`);
+  return res.json();
+}
+
 export function documentDownloadUrl(documentId: string): string {
   return `${API_BASE_URL}/documents/${documentId}/download`;
 }

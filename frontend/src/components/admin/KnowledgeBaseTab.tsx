@@ -7,6 +7,7 @@ import {
   searchKnowledgeRecords,
   type ApiKnowledgeRecord,
 } from '../../lib/api';
+import { SchedulerStatusPanel } from './SchedulerStatusPanel';
 
 const INDUSTRIES = ['Healthcare', 'Logistics', 'Fintech'];
 
@@ -110,8 +111,8 @@ function BriefRefreshForm() {
         </button>
       </div>
       <div className="mt-1.5 text-[9.5px] text-gray">
-        Real Claude web_search research, ~10-30s. On-demand for now — a true periodic schedule
-        needs the same scheduler infrastructure as the key-date notifier.
+        Real Claude web_search research, ~10-30s. Also runs automatically every 24h via the real
+        scheduler below — this button triggers an on-demand refresh in addition to that.
       </div>
       {(industryMutation.isError || competitorMutation.isError) && (
         <div className="mt-1.5 text-[10px] text-red">
@@ -200,6 +201,7 @@ export function KnowledgeBaseTab() {
         and Competitor Insight are refreshed on demand below using real web search.
       </div>
 
+      <SchedulerStatusPanel />
       <BriefRefreshForm />
 
       {isLoading && <div className="text-[11px] text-gray">Loading…</div>}

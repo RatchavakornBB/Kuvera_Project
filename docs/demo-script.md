@@ -73,8 +73,8 @@ mentioning if asked "does this feed back into future analysis?"
 | Analyst Lead (3.1–3.4: doc summarizer, risk flagger, IC memo, pricing) | **Live** — real LangGraph graph, Postgres Checkpointer, verified end to end including a real contradiction-check hit during testing |
 | Contracts Lead (4.1 summarizer, 4.2 clause extractor) | **Live** |
 | Concierge Q&A + Orchestrator routing (web search, SEC EDGAR) | **Live** — real `web_search` tool, real SEC EDGAR API calls |
-| Key-date notifier | **Live**, but on-demand/polled, not a true server cron (no task-queue infra in a 5-day build) |
-| Agent Hub | **Live**, but a static activity log reconstructed from checkpoints — not the full 21-agent grid / live graph view from the design doc |
+| Key-date notifier | **Live** — a real in-process APScheduler (backend/app/scheduler.py) fires a real server-side check every 5 minutes, independent of any client polling; verified via a real `scheduled_run_log` entry, not just the endpoint working. The same scheduler also refreshes Industry Briefs every 24h |
+| Agent Hub | **Live** — a real Agent Grid (13 real agents across 7 Leads, grouped and filterable by status/provider — the design doc's "21 agents" framing doesn't match what's actually built, so this shows the real count honestly), a real Live Graph view of the Analyst Lead's actual LangGraph structure (polls every 3s, the running node highlights), plus the original static Activity Log, all backed by real `call_model()` invocation logging (agents/activity_tracker.py) across every agent, not just the 4 Analyst Lead nodes |
 | Documents & Contracts screen search | **Not live (semantic)** — substring search on name/summary. This is a different, older gap than the Knowledge Base's search below — this one was never upgraded |
 | Admin & Skill Governance (Agents & Models, Skills, Pending Approvals, Audit Log, Knowledge Base) | **Live** — real DB-backed config wired into the actual `call_model()` call; an approved skill/model change genuinely changes the next real Claude API call. Eval pass-rate bar is not built — no eval framework exists to honestly back it |
 | Knowledge Agent (Section 10.1) — Deal Profile, Evaluation/Analysis/Strategy Approach, Outcome, Risk Signals, Prompt/Loop Engineering | **Live** — real pgvector semantic search (Voyage AI embeddings), a real "Close Deal" action promotes real deal data into it via a real Claude synthesis call, and `risk_flagger`/`pricing_advisor` retrieve real historical precedent from it automatically. Industry Insight / Competitor Insight / Company Insight are **not built** — those need a periodically-refreshed cross-deal Brief fed by an outside-world monitoring pipeline that doesn't exist here |
@@ -97,15 +97,15 @@ mentioning if asked "does this feed back into future analysis?"
   call for that agent uses it — I verified that end to end. The Knowledge Base tab and eval
   pass-rate scoring from the design doc aren't built, since there's no Knowledge Agent or eval
   framework yet to honestly back them."
-- **"Does the Agent Hub show all 21 agents live?"** — "Right now it's a real activity log of the
-  Analyst Lead's 4 nodes, reconstructed from LangGraph's own checkpoint state — genuinely real, not
-  a mock, but scoped down from the full live-graph view in the design doc on purpose, per the
-  5-day timeline."
-- **"What about the Learning Agent / Knowledge Agent?"** — "Different answers for each now. The
-  Knowledge Agent is live — closing a deal really promotes structured knowledge with real pgvector
-  embeddings, and the Analyst Lead retrieves it automatically as precedent on later deals. The
-  Learning Agent (continuous outside-world news/regulatory ingestion) isn't built — that needs a
-  scheduled ingestion pipeline outside this MVP's scope."
+- **"Does the Agent Hub show all 21 agents live?"** — "It shows a real grid and live graph now —
+  but there are 13 real agents in this codebase, not 21, and the grid says so honestly rather than
+  padding the count. Every card's status is backed by real invocation logging, not mocked."
+- **"What about the Learning Agent / Knowledge Agent?"** — "Both are live now. The Knowledge Agent
+  promotes structured knowledge with real pgvector embeddings when a deal closes, and the Analyst
+  Lead retrieves it automatically as precedent on later deals. The Learning Agent runs real
+  web-search research and can propose real skill.md changes into the same approval queue a human
+  uses — verified with a real Thailand PDPA regulatory research cycle that proposed a specific,
+  grounded change to risk_flagger's skill."
 - **"Is the semantic search real (pgvector)?"** — "Depends which search — the Documents & Contracts
   screen's search bar is still substring matching, that's a known unfixed gap. The Knowledge Base's
   search is real pgvector with Voyage AI embeddings, verified end to end including cross-deal
