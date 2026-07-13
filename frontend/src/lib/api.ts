@@ -165,6 +165,23 @@ export async function fetchLatestAnalysis(dealId: string): Promise<ApiAnalysis |
   return res.json();
 }
 
+export interface ApiKeyDateNotification {
+  document_id: string;
+  document_name: string;
+  deal_id: string;
+  deal_name: string | null;
+  key_date: string;
+  days_until: number;
+}
+
+export async function fetchKeyDateNotifications(days = 30): Promise<ApiKeyDateNotification[]> {
+  const res = await fetch(`${API_BASE_URL}/notifications/key-dates?days=${days}`);
+  if (!res.ok) {
+    throw new Error(`GET /notifications/key-dates failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export interface ApiAgentActivity {
   thread_id: string;
   deal_id: string;

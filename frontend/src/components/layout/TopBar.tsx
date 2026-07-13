@@ -1,3 +1,5 @@
+import { NotificationBell } from './NotificationBell';
+
 interface TopBarProps {
   onToggleChat: () => void;
 }
@@ -29,6 +31,8 @@ export function TopBar({ onToggleChat }: TopBarProps) {
         <div className="h-[7px] w-[7px] rounded-full bg-violet" style={{ animation: 'pulse-dot 2s infinite' }} />
         <div className="text-xs text-[#e7e7ea]">Ask Kuvera Assistant</div>
       </button>
+
+      <NotificationBell />
 
       <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue text-[11px] font-semibold text-terminal-black">
         PS
