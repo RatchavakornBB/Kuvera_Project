@@ -1,12 +1,12 @@
 ## Current
 Phase: 4 (Integration)
-Active task: phase4-001c-analysis-tab (Deal Detail Analysis tab: risk cards, IC memo, pricing)
+Active task: phase4-001d-tasks-notes-tab (Deal Detail Tasks & Notes tab)
 Status: in_progress
-Last checkpoint commit: 1982452
+Last checkpoint commit: c559151
 Blocked on: nothing
 
 ## Next up
-phase4-001c-analysis-tab, phase4-001d-tasks-notes-tab, phase4-002-documents-contracts-screen,
+phase4-001d-tasks-notes-tab, phase4-002-documents-contracts-screen,
 phase4-003-agent-hub, phase4-004-key-date-notifier, then a full integration pass
 (Dashboard -> Deal Detail -> Chat, uninterrupted). User asked to do all of this
 continuously (2026-07-13).

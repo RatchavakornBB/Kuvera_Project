@@ -1,7 +1,6 @@
 # PROCESS/backlog.md — ready / blocked / deferred work
 
 ## Ready
-- [ ] phase4-001c-analysis-tab — Deal Detail Analysis tab: risk flag cards, IC memo panel (Generate/Regenerate via /analyze), pricing section (collapsed by default).
 - [ ] phase4-001d-tasks-notes-tab — Deal Detail Tasks & Notes tab, real tasks/meeting_notes data.
 - [ ] phase4-002-documents-contracts-screen — the dedicated Documents & Contracts screen (search, filter, document detail side panel) — separate from the per-deal Documents tab.
 - [ ] phase4-003-agent-hub — static activity log table. Real data to read now exists: LangGraph's `checkpoints`/`checkpoint_writes` tables (Postgres Checkpointer, live since Phase 2) actually recorded every node run across all the Phase 2/3 testing.
@@ -44,4 +43,6 @@ Phase 4 (in progress): app-shell-routing (react-router + top bar/sidebar shell),
 phase1-007-table-pipeline-view (Table view + Pipeline funnel strip + New Deal modal,
 plus fixing the previously-deferred hardcoded risk_flags=0 now that real risk_flagger
 data exists), phase4-001a-deal-detail-overview, phase4-001b-documents-tab (required
-docs checklist + file library wired to real upload).
+docs checklist + file library wired to real upload), phase4-001c-analysis-tab (risk
+flag cards grouped by severity, IC memo panel with Regenerate, collapsed pricing
+section, new GET /deals/{id}/analysis endpoint to hydrate without a fresh LLM run).
