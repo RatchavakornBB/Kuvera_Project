@@ -11,6 +11,7 @@ import logging
 
 from agents.adapters.model_adapter import call_model
 from agents.errors import NodeFailure
+from agents.knowledge import historical_precedent_context
 from agents.retry import with_retry
 from agents.state import AnalystState
 
@@ -27,6 +28,7 @@ SUMMARY:
 
 RISK FLAGS:
 {risk_flags}
+{precedent}
 """
 
 
@@ -36,8 +38,12 @@ def _format_risk_flags(risk_flags: list[dict]) -> str:
     return "\n".join(f"- [{r['severity']}] {r['description']}" for r in risk_flags)
 
 
-def _call_and_parse(summary: str, risk_flags: list[dict]) -> str:
-    prompt = PRICING_PROMPT.format(summary=summary, risk_flags=_format_risk_flags(risk_flags))
+def _call_and_parse(deal_id: str, summary: str, risk_flags: list[dict]) -> str:
+    # Real Knowledge Agent retrieval (system-architecture.md Section 10.1) —
+    # genuine pgvector search over past closed deals' pricing/outcome
+    # precedent. Best-effort: swallows its own failures, same as risk_flagger.
+    precedent = historical_precedent_context(deal_id, summary)
+    prompt = PRICING_PROMPT.format(summary=summary, risk_flags=_format_risk_flags(risk_flags), precedent=precedent)
     response = call_model(
         "pricing_advisor",
         messages=[{"role": "user", "content": prompt}],
@@ -52,7 +58,8 @@ def _call_and_parse(summary: str, risk_flags: list[dict]) -> str:
 def pricing_advisor(state: AnalystState) -> dict:
     try:
         pricing_note = with_retry(
-            "pricing_advisor", lambda: _call_and_parse(state["summary"], state.get("risk_flags", []))
+            "pricing_advisor",
+            lambda: _call_and_parse(state["deal_id"], state["summary"], state.get("risk_flags", [])),
         )
         return {"pricing_note": pricing_note}
     except NodeFailure as e:

@@ -3,6 +3,8 @@ functions, never the supabase client directly."""
 
 from typing import Any
 
+from agents.knowledge import promote_deal_to_knowledge
+
 from app.db import get_client
 
 _DEAL_SELECT = "*, owner:users(id, full_name, initials)"
@@ -92,6 +94,16 @@ def update_task(deal_id: str, task_id: str, fields: dict[str, Any]) -> dict[str,
     client = get_client()
     res = client.table("tasks").update(fields).eq("id", task_id).eq("deal_id", deal_id).execute()
     return res.data[0] if res.data else None
+
+
+def close_deal(deal_id: str, outcome: str) -> dict[str, Any]:
+    """Real promotion trigger for the Knowledge Agent (system-architecture.md
+    Section 10.1's "on deal close"). Sets the deal Closed and synthesizes
+    real knowledge_base records from that deal's actual data — not a stub."""
+    client = get_client()
+    client.table("deals").update({"status": "Closed"}).eq("id", deal_id).execute()
+    records = promote_deal_to_knowledge(deal_id, outcome)
+    return {"deal_id": deal_id, "outcome": outcome, "knowledge_records_created": len(records)}
 
 
 def get_deal(deal_id: str) -> dict[str, Any] | None:

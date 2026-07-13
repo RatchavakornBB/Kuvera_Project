@@ -255,6 +255,52 @@ export async function fetchAuditLog(): Promise<ApiAuditEntry[]> {
   return res.json();
 }
 
+export interface ApiKnowledgeRecord {
+  id: string;
+  source_deal_id: string | null;
+  category: string;
+  company_name: string | null;
+  industry: string | null;
+  content: Record<string, unknown>;
+  summary: string;
+  created_at?: string;
+  similarity?: number;
+}
+
+export async function fetchKnowledgeRecords(params: {
+  industry?: string;
+  category?: string;
+}): Promise<ApiKnowledgeRecord[]> {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) search.set(key, value);
+  }
+  const res = await fetch(`${API_BASE_URL}/admin/knowledge-base?${search.toString()}`);
+  if (!res.ok) throw new Error(`GET /admin/knowledge-base failed: ${res.status}`);
+  return res.json();
+}
+
+export async function searchKnowledgeRecords(q: string, industry?: string): Promise<ApiKnowledgeRecord[]> {
+  const search = new URLSearchParams({ q });
+  if (industry) search.set('industry', industry);
+  const res = await fetch(`${API_BASE_URL}/admin/knowledge-base/search?${search.toString()}`);
+  if (!res.ok) throw new Error(`GET /admin/knowledge-base/search failed: ${res.status}`);
+  return res.json();
+}
+
+export async function closeDeal(dealId: string, outcome: 'won' | 'lost'): Promise<{ knowledge_records_created: number }> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/close`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ outcome }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(`POST /deals/${dealId}/close failed: ${res.status} ${body ? JSON.stringify(body.detail) : ''}`);
+  }
+  return res.json();
+}
+
 export interface ApiAgentActivity {
   thread_id: string;
   deal_id: string;

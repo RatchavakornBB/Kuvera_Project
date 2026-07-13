@@ -13,6 +13,7 @@ hypothesis status, just a visible flag for the user to resolve.
 from agents.adapters.model_adapter import call_model
 from agents.analyses import get_last_analysis
 from agents.documents import build_content_block, fetch_document
+from agents.knowledge import historical_precedent_context
 from agents.retry import with_retry
 from agents.state import AnalystState
 
@@ -71,6 +72,12 @@ def _run_once(state: AnalystState) -> list:
     prior = get_last_analysis(state["deal_id"])
     if prior:
         instructions += CONTRADICTION_INSTRUCTIONS.format(prior_summary=prior["summary"])
+
+    # Real Knowledge Agent retrieval (system-architecture.md Section 10.1) —
+    # genuine pgvector search over past closed deals, not the lightweight
+    # context-stuffing pattern used elsewhere in this codebase. Best-effort:
+    # historical_precedent_context() swallows its own failures.
+    instructions += historical_precedent_context(state["deal_id"], state["summary"])
 
     response = call_model(
         "risk_flagger",

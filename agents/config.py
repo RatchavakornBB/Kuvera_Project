@@ -28,6 +28,7 @@ class AgentSettings:
         self.database_url = os.environ["DATABASE_URL"]  # LangGraph Postgres Checkpointer only
         self.openai_api_key = os.environ.get("OPENAI_API_KEY")
         self.google_api_key = os.environ.get("GOOGLE_API_KEY")
+        self.voyage_api_key = os.environ.get("VOYAGER_API_KEY")  # sic — matches the .env key name
 
 
 settings = AgentSettings()

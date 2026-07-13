@@ -52,6 +52,19 @@ re-trigger a live analysis just to prove it (see the "do not click Regenerate li
 If asked "does this actually work," the honest answer is yes, and it was verified with a raw
 `call_model()` test during development, not just this UI.
 
+### Optional bonus step 2: Knowledge Agent (~2 min, if time and interest allow)
+
+| # | Screen / action | What to say | Why it matters |
+|---|---|---|---|
+| 17 | Open **Nova Fintech** → header → point at "Closed" status | "This deal is already closed — I closed it live during development, and it really promoted knowledge, not a mock." | Sets up the payoff |
+| 18 | Sidebar → **Admin** → **Knowledge Base** tab | "Every category from the design doc's Knowledge schema that's honestly derivable from real deal data — Evaluation Approach, Analysis Approach, Risk Signals, Outcome, even which skill.md/model each agent used at close time." Expand one record. | Real structured knowledge, not raw documents |
+| 19 | Type a query in the search box (e.g. "valuation risk") | "Real pgvector — this embeds the query with Voyage AI and ranks every promoted record by cosine similarity, across every closed deal." Point out results from more than one deal, ranked by relevance. | Proves genuine semantic search, not a keyword filter |
+
+Note: `risk_flagger` and `pricing_advisor` also retrieve this automatically on every real run now
+— historical precedent from past closed deals gets silently folded into their prompts when
+relevant. Not something to demo live (it's inside the prompt, not visible in the UI), but worth
+mentioning if asked "does this feed back into future analysis?"
+
 ## 4. Live vs. design-only — have this ready if asked directly
 
 | Feature | Status |
@@ -62,10 +75,11 @@ If asked "does this actually work," the honest answer is yes, and it was verifie
 | Concierge Q&A + Orchestrator routing (web search, SEC EDGAR) | **Live** — real `web_search` tool, real SEC EDGAR API calls |
 | Key-date notifier | **Live**, but on-demand/polled, not a true server cron (no task-queue infra in a 5-day build) |
 | Agent Hub | **Live**, but a static activity log reconstructed from checkpoints — not the full 21-agent grid / live graph view from the design doc |
-| Semantic document search | **Not live** — substring search on name/summary; real pgvector semantic search needs an embeddings pipeline not built in this MVP |
-| Admin & Skill Governance (Agents & Models, Skills, Pending Approvals, Audit Log) | **Live** — real DB-backed config wired into the actual `call_model()` call; an approved skill/model change genuinely changes the next real Claude API call. Verified by approving a real skill change and confirming the next Claude response reflected it. Knowledge Base tab and eval pass-rate bar are not built — nothing real backs either (no Knowledge Agent, no eval framework) |
+| Documents & Contracts screen search | **Not live (semantic)** — substring search on name/summary. This is a different, older gap than the Knowledge Base's search below — this one was never upgraded |
+| Admin & Skill Governance (Agents & Models, Skills, Pending Approvals, Audit Log, Knowledge Base) | **Live** — real DB-backed config wired into the actual `call_model()` call; an approved skill/model change genuinely changes the next real Claude API call. Eval pass-rate bar is not built — no eval framework exists to honestly back it |
+| Knowledge Agent (Section 10.1) — Deal Profile, Evaluation/Analysis/Strategy Approach, Outcome, Risk Signals, Prompt/Loop Engineering | **Live** — real pgvector semantic search (Voyage AI embeddings), a real "Close Deal" action promotes real deal data into it via a real Claude synthesis call, and `risk_flagger`/`pricing_advisor` retrieve real historical precedent from it automatically. Industry Insight / Competitor Insight / Company Insight are **not built** — those need a periodically-refreshed cross-deal Brief fed by an outside-world monitoring pipeline that doesn't exist here |
+| Learning Agent (continuous outside-world ingestion, separate from Knowledge Agent) | **Design-only** — not built |
 | Drafting Lead (5.1 doc/email prep, 5.2 deck prep) | **Design-only** — not built |
-| Knowledge Agent / Learning Agent (background promotion + outside-world ingestion) | **Design-only** — not built |
 | Full contradiction/hypothesis confidence-scoring engine | **Design-only** — the *lightweight* version (a visible flag, no scoring) is live |
 | RBAC / multi-user auth | **Not built** — single demo user, no login screen, no role gating |
 | Cloud deploy | **Not done** — local + screen-share for this demo (see PROCESS/backlog.md) |
@@ -87,13 +101,15 @@ If asked "does this actually work," the honest answer is yes, and it was verifie
   Analyst Lead's 4 nodes, reconstructed from LangGraph's own checkpoint state — genuinely real, not
   a mock, but scoped down from the full live-graph view in the design doc on purpose, per the
   5-day timeline."
-- **"What about the Learning Agent / Knowledge Agent?"** — "Not built — those are background
-  services in the architecture for promoting patterns across deals and ingesting outside news. Out
-  of scope for a 5-day MVP; the deal-scoped Concierge Q&A and web-search tool are the live
-  equivalent for this build."
-- **"Is the semantic search real (pgvector)?"** — "Not yet — it's substring search on the document
-  name and AI summary right now. Wiring up embeddings is a schema + pipeline change, logged as a
-  known gap, not something I tried to fake."
+- **"What about the Learning Agent / Knowledge Agent?"** — "Different answers for each now. The
+  Knowledge Agent is live — closing a deal really promotes structured knowledge with real pgvector
+  embeddings, and the Analyst Lead retrieves it automatically as precedent on later deals. The
+  Learning Agent (continuous outside-world news/regulatory ingestion) isn't built — that needs a
+  scheduled ingestion pipeline outside this MVP's scope."
+- **"Is the semantic search real (pgvector)?"** — "Depends which search — the Documents & Contracts
+  screen's search bar is still substring matching, that's a known unfixed gap. The Knowledge Base's
+  search is real pgvector with Voyage AI embeddings, verified end to end including cross-deal
+  ranking."
 - **"What happens if I upload a bad/huge file?"** — honest answer if asked live: "Upload isn't
   validated by file type/size yet — that's a real gap I'd fix before production, not before a demo."
 - **"Is this deployed anywhere?"** — "Running locally against a local Supabase instance for this

@@ -26,6 +26,10 @@ class TaskUpdate(BaseModel):
     done: bool | None = None
 
 
+class CloseDealRequest(BaseModel):
+    outcome: str
+
+
 @router.get("")
 def list_deals(stage: str | None = None, industry: str | None = None, owner: str | None = None):
     return deals_service.list_deals(stage=stage, industry=industry, owner=owner)
@@ -62,3 +66,12 @@ def update_task(deal_id: str, task_id: str, body: TaskUpdate):
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
+
+
+@router.post("/{deal_id}/close")
+def close_deal(deal_id: str, body: CloseDealRequest):
+    if deals_service.get_deal(deal_id) is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    if body.outcome not in ("won", "lost"):
+        raise HTTPException(status_code=400, detail="outcome must be 'won' or 'lost'")
+    return deals_service.close_deal(deal_id, body.outcome)
