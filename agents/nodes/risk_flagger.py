@@ -3,15 +3,18 @@ plus the original document and identifies missing information and key
 investment risks. Only runs once 3.1 doc_summarizer has completed (the
 gate — system-architecture.md Section 4.3).
 
-Also carries the lightweight contradiction check (timeline Section 6 Phase
-2, scoped down from Section 10.5): on re-analysis, if a prior stored
+Also carries the contradiction check: on re-analysis, if a prior stored
 analysis exists for this deal, any figure/fact that contradicts it is
-surfaced as an ordinary high-severity risk flag — no confidence scoring or
-hypothesis status, just a visible flag for the user to resolve.
+surfaced as an ordinary high-severity risk flag (unchanged, already-verified
+behavior) AND recorded structurally via agents/contradictions.py — status
+ranks (unconfirmed -> corroborated -> resolved/refuted) with real pgvector-
+matched corroboration counting across re-analyses, since the flagged
+description is freshly LLM-generated each time and never identical wording.
 """
 
 from agents.adapters.model_adapter import call_model
 from agents.analyses import get_last_analysis
+from agents.contradictions import record_contradiction
 from agents.documents import build_content_block, fetch_document
 from agents.knowledge import historical_precedent_context
 from agents.retry import with_retry
@@ -31,6 +34,10 @@ RISK_FLAGGER_TOOL = {
                         "severity": {"type": "string", "enum": ["high", "medium"]},
                         "description": {"type": "string"},
                         "source_excerpt": {"type": "string"},
+                        "is_contradiction": {
+                            "type": "boolean",
+                            "description": "true ONLY for the one flag added specifically because it contradicts the prior stored analysis — omit or false for every ordinary risk flag",
+                        },
                     },
                     "required": ["severity", "description", "source_excerpt"],
                 },
@@ -56,9 +63,24 @@ CONTRADICTION_INSTRUCTIONS = (
     "the PRIOR summary that follows it. If any key figure or fact changed between the "
     "two versions (e.g. a revenue number, a risk that disappeared or a new one that "
     "appeared, a changed clause), add ONE additional 'high' severity risk flag "
-    "describing the contradiction, with source_excerpt quoting the new document. If "
-    "nothing contradicts, do not add a flag for this.\n\nPRIOR SUMMARY:\n{prior_summary}"
+    "describing the contradiction, with source_excerpt quoting the new document, and set "
+    "is_contradiction: true on that flag (and only that flag). If nothing contradicts, do "
+    "not add a flag for this.\n\nPRIOR SUMMARY:\n{prior_summary}"
 )
+
+
+def _record_flagged_contradictions(deal_id: str, risk_flags: list[dict]) -> None:
+    # Best-effort, same reasoning as historical_precedent_context: this is
+    # structured bookkeeping on top of an already-returned, already-correct
+    # risk_flags list — a failure here must never invalidate the real output
+    # the user is waiting on.
+    for flag in risk_flags:
+        if not flag.get("is_contradiction"):
+            continue
+        try:
+            record_contradiction(deal_id, flag["description"], flag.get("source_excerpt", ""))
+        except Exception:
+            pass
 
 
 def _run_once(state: AnalystState) -> list:
@@ -91,14 +113,21 @@ def _run_once(state: AnalystState) -> list:
             }
         ],
         tools=[RISK_FLAGGER_TOOL],
-        max_tokens=4096,
+        # Bumped from 4096, then again from 8192, after real /deals/{id}/analyze
+        # runs repeatedly hit stop_reason='max_tokens' mid tool-call — extended
+        # thinking + a document with many real findable risks + contradiction/
+        # historical-precedent reasoning can push output well past what this was
+        # originally tuned for. 16384 gives real headroom, not a guess.
+        max_tokens=16384,
     )
 
     for block in response.content:
         if block.type == "tool_use" and block.name == "report_risk_flags":
             if "risk_flags" not in block.input:
                 raise ValueError(f"tool_use input missing 'risk_flags' key: {block.input!r}")
-            return block.input["risk_flags"]
+            risk_flags = block.input["risk_flags"]
+            _record_flagged_contradictions(state["deal_id"], risk_flags)
+            return risk_flags
 
     raise ValueError(f"model did not call report_risk_flags (stop_reason={response.stop_reason!r})")
 

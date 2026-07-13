@@ -26,6 +26,8 @@ AGENT_MODELS: dict[str, str] = {
     "concierge_qa": "claude-sonnet-5",
     "orchestrator": "claude-sonnet-5",
     "knowledge_promoter": "claude-sonnet-5",
+    "industry_brief": "claude-sonnet-5",
+    "competitor_brief": "claude-sonnet-5",
 }
 DEFAULT_MODEL = "claude-sonnet-5"
 

@@ -4,6 +4,7 @@ import { analyzeDocument, fetchLatestAnalysis, type ApiDealDetail } from '../../
 import { RiskFlagCards } from './RiskFlagCards';
 import { IcMemoPanel } from './IcMemoPanel';
 import { PricingSection } from './PricingSection';
+import { ContradictionsPanel } from './ContradictionsPanel';
 
 export function AnalysisTab({ deal }: { deal: ApiDealDetail }) {
   const queryClient = useQueryClient();
@@ -76,6 +77,8 @@ export function AnalysisTab({ deal }: { deal: ApiDealDetail }) {
           selected document.
         </div>
       )}
+
+      <ContradictionsPanel dealId={deal.id} />
 
       {displayed && (
         <>

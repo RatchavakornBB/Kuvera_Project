@@ -255,6 +255,41 @@ export async function fetchAuditLog(): Promise<ApiAuditEntry[]> {
   return res.json();
 }
 
+export interface ApiContradiction {
+  id: string;
+  deal_id: string;
+  description: string;
+  source_excerpt: string | null;
+  status: 'unconfirmed' | 'corroborated' | 'resolved' | 'refuted';
+  corroboration_count: number;
+  first_flagged_at: string;
+  last_seen_at: string;
+  resolved_at: string | null;
+  resolution_note: string | null;
+  promoted_to_knowledge_base: boolean;
+}
+
+export async function fetchContradictions(dealId: string): Promise<ApiContradiction[]> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/contradictions`);
+  if (!res.ok) throw new Error(`GET /deals/${dealId}/contradictions failed: ${res.status}`);
+  return res.json();
+}
+
+export async function resolveContradiction(
+  dealId: string,
+  contradictionId: string,
+  resolution: 'resolved' | 'refuted',
+  note: string,
+): Promise<ApiContradiction> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/contradictions/${contradictionId}/resolve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ resolution, note }),
+  });
+  if (!res.ok) throw new Error(`POST resolve contradiction failed: ${res.status}`);
+  return res.json();
+}
+
 export interface ApiKnowledgeRecord {
   id: string;
   source_deal_id: string | null;
@@ -285,6 +320,26 @@ export async function searchKnowledgeRecords(q: string, industry?: string): Prom
   if (industry) search.set('industry', industry);
   const res = await fetch(`${API_BASE_URL}/admin/knowledge-base/search?${search.toString()}`);
   if (!res.ok) throw new Error(`GET /admin/knowledge-base/search failed: ${res.status}`);
+  return res.json();
+}
+
+export async function refreshIndustryBrief(industry: string): Promise<ApiKnowledgeRecord> {
+  const res = await fetch(`${API_BASE_URL}/admin/knowledge-base/refresh-industry-brief`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ industry }),
+  });
+  if (!res.ok) throw new Error(`POST refresh-industry-brief failed: ${res.status}`);
+  return res.json();
+}
+
+export async function refreshCompetitorBrief(companyName: string, industry: string): Promise<ApiKnowledgeRecord> {
+  const res = await fetch(`${API_BASE_URL}/admin/knowledge-base/refresh-competitor-brief`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ company_name: companyName, industry }),
+  });
+  if (!res.ok) throw new Error(`POST refresh-competitor-brief failed: ${res.status}`);
   return res.json();
 }
 

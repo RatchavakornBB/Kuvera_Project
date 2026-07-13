@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from app.services import contradictions as contradictions_service
 from app.services import deals as deals_service
 
 router = APIRouter(prefix="/deals", tags=["deals"])
@@ -28,6 +29,11 @@ class TaskUpdate(BaseModel):
 
 class CloseDealRequest(BaseModel):
     outcome: str
+
+
+class ResolveContradiction(BaseModel):
+    resolution: str
+    note: str = ""
 
 
 @router.get("")
@@ -75,3 +81,18 @@ def close_deal(deal_id: str, body: CloseDealRequest):
     if body.outcome not in ("won", "lost"):
         raise HTTPException(status_code=400, detail="outcome must be 'won' or 'lost'")
     return deals_service.close_deal(deal_id, body.outcome)
+
+
+@router.get("/{deal_id}/contradictions")
+def list_contradictions(deal_id: str):
+    if deals_service.get_deal(deal_id) is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    return contradictions_service.list_for_deal(deal_id)
+
+
+@router.post("/{deal_id}/contradictions/{contradiction_id}/resolve")
+def resolve_contradiction(deal_id: str, contradiction_id: str, body: ResolveContradiction):
+    try:
+        return contradictions_service.resolve(contradiction_id, body.resolution, body.note)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e

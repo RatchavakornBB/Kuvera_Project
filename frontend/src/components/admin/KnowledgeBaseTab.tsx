@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchKnowledgeRecords,
+  refreshCompetitorBrief,
+  refreshIndustryBrief,
   searchKnowledgeRecords,
   type ApiKnowledgeRecord,
 } from '../../lib/api';
+
+const INDUSTRIES = ['Healthcare', 'Logistics', 'Fintech'];
 
 const CATEGORY_LABEL: Record<string, string> = {
   deal_profile: 'Deal Profile',
@@ -44,6 +48,74 @@ function RecordCard({ record }: { record: ApiKnowledgeRecord }) {
           <pre className="whitespace-pre-wrap break-words font-mono text-[10.5px] leading-relaxed text-gray">
             {JSON.stringify(record.content, null, 2)}
           </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BriefRefreshForm() {
+  const queryClient = useQueryClient();
+  const [briefIndustry, setBriefIndustry] = useState(INDUSTRIES[0]);
+  const [competitorName, setCompetitorName] = useState('');
+
+  const industryMutation = useMutation({
+    mutationFn: () => refreshIndustryBrief(briefIndustry),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['knowledge-base'] }),
+  });
+
+  const competitorMutation = useMutation({
+    mutationFn: () => refreshCompetitorBrief(competitorName.trim(), briefIndustry),
+    onSuccess: () => {
+      setCompetitorName('');
+      queryClient.invalidateQueries({ queryKey: ['knowledge-base'] });
+    },
+  });
+
+  return (
+    <div className="rounded border border-grid bg-panel p-3">
+      <div className="mb-2 text-[10.5px] font-semibold text-white">Refresh a Brief</div>
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={briefIndustry}
+          onChange={(e) => setBriefIndustry(e.target.value)}
+          className="rounded-sm border border-grid bg-terminal-black px-2 py-1.5 text-[11px] text-white"
+        >
+          {INDUSTRIES.map((i) => (
+            <option key={i} value={i}>
+              {i}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => industryMutation.mutate()}
+          disabled={industryMutation.isPending}
+          className="cursor-pointer rounded border border-grid bg-transparent px-2.5 py-1.5 text-[10.5px] text-blue disabled:opacity-40"
+        >
+          {industryMutation.isPending ? 'Researching…' : 'Refresh Industry Brief'}
+        </button>
+        <span className="text-[10px] text-gray">or</span>
+        <input
+          value={competitorName}
+          onChange={(e) => setCompetitorName(e.target.value)}
+          placeholder="Competitor company name…"
+          className="rounded-sm border border-grid bg-terminal-black px-2 py-1.5 text-[11px] text-white placeholder:text-gray"
+        />
+        <button
+          onClick={() => competitorMutation.mutate()}
+          disabled={!competitorName.trim() || competitorMutation.isPending}
+          className="cursor-pointer rounded border border-grid bg-transparent px-2.5 py-1.5 text-[10.5px] text-blue disabled:opacity-40"
+        >
+          {competitorMutation.isPending ? 'Researching…' : 'Refresh Competitor Brief'}
+        </button>
+      </div>
+      <div className="mt-1.5 text-[9.5px] text-gray">
+        Real Claude web_search research, ~10-30s. On-demand for now — a true periodic schedule
+        needs the same scheduler infrastructure as the key-date notifier.
+      </div>
+      {(industryMutation.isError || competitorMutation.isError) && (
+        <div className="mt-1.5 text-[10px] text-red">
+          Refresh failed: {String(industryMutation.error ?? competitorMutation.error)}
         </div>
       )}
     </div>
@@ -100,9 +172,11 @@ export function KnowledgeBaseTab() {
           className="rounded border border-grid bg-panel px-2.5 py-2 text-[11.5px] text-white"
         >
           <option value="">All industries</option>
-          <option value="Healthcare">Healthcare</option>
-          <option value="Logistics">Logistics</option>
-          <option value="Fintech">Fintech</option>
+          {INDUSTRIES.map((i) => (
+            <option key={i} value={i}>
+              {i}
+            </option>
+          ))}
         </select>
         {!activeSearch && (
           <select
@@ -122,10 +196,11 @@ export function KnowledgeBaseTab() {
 
       <div className="text-[10px] text-gray">
         Real, promoted from closed deals — not seeded or fabricated. Close a deal from its Deal
-        Detail header to populate this. Industry/Competitor Insight aren't populated: they'd need a
-        periodically-refreshed cross-deal Brief, which needs an outside-world monitoring pipeline
-        not built in this MVP.
+        Detail header to populate Deal Profile / Evaluation / Analysis / Outcome records. Industry
+        and Competitor Insight are refreshed on demand below using real web search.
       </div>
+
+      <BriefRefreshForm />
 
       {isLoading && <div className="text-[11px] text-gray">Loading…</div>}
 
