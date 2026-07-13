@@ -126,5 +126,13 @@ pre-existing gap along the way: no document download mechanism existed
 anywhere in the app — added a real backend-mediated
 GET /documents/{id}/download and wired it into every document list.
 
+phase6-005-agent-hub-full-view — real Agent Grid (13 real agents across
+7 Leads, not padded to the spec's "21"), Live Graph (real SVG of
+agents/graph.py's actual structure, polls every 3s), agent detail
+panel (real sparkline + history). Closed a real gap first: instrumented
+call_model() to log every real invocation (agent_invocations table) so
+all 13 agents get real status, not just the 4 Analyst Lead nodes the
+older checkpoint-based log could see.
+
 Eval pass-rate bar remains the one piece of the Admin spec not built —
 no eval framework exists anywhere in this codebase (see phase6-007).
