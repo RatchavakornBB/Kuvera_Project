@@ -1,14 +1,15 @@
 ## Current
 Phase: 4 (Integration)
-Active task: phase4-004-key-date-notifier
+Active task: full-integration-pass (Dashboard -> Deal Detail -> Chat, uninterrupted)
 Status: in_progress
-Last checkpoint commit: 35dfe0a
+Last checkpoint commit: 8dab695
 Blocked on: nothing
 
 ## Next up
-phase4-004-key-date-notifier, then a full integration pass (Dashboard -> Deal Detail
--> Chat, uninterrupted). All of Deal Detail, Documents & Contracts, and Agent Hub are
-now built. User asked to do all of this continuously (2026-07-13).
+Full integration pass: click through Dashboard -> Deal Detail (all 4 tabs) -> Documents
+& Contracts -> Agent Hub -> Chat as one uninterrupted flow, fix any broken links/state.
+This is the last item before Phase 4 is complete (5day-build-timeline.md's final Phase 4
+block, 16:00-17:30). User asked to do all of this continuously (2026-07-13).
 
 ## Open questions for user
 - none currently open

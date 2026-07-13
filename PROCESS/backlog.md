@@ -1,7 +1,7 @@
 # PROCESS/backlog.md — ready / blocked / deferred work
 
 ## Ready
-- [ ] phase4-004-key-date-notifier — 4.3 Key-date notifier (system-architecture.md Section 8), deferred out of phase3-001 since it's explicitly a "scheduled background check," different infrastructure than the ingest-triggered 4.1/4.2.
+- [ ] full-integration-pass — click through Dashboard -> Deal Detail -> Documents & Contracts -> Agent Hub -> Chat as one uninterrupted flow, fix any broken links/state between screens.
 - [ ] phase5-admin-skill-governance — Admin & Skill Governance screen (design-only candidate — check with user whether this stays design-only per the MVP scope table before building).
 
 ## Blocked
@@ -59,3 +59,8 @@ Checkpointer state (not the full live-graph/21-agent-grid surface, per the
 timeline's own scoped-down instruction). Found and fixed a real bug: the
 parallel fan-out step writes two nodes into one checkpoint row, and the first
 pass only surfaced one of them.
+
+phase4-004-key-date-notifier — on-demand GET /notifications/key-dates (no
+task-queue infra in this MVP, so not a true scheduled job — logged as a
+deliberate decision) + a persistent NotificationBell in TopBar, visible on
+every screen, with real badge count and localStorage-backed per-item dismiss.
