@@ -182,6 +182,79 @@ export async function fetchKeyDateNotifications(days = 30): Promise<ApiKeyDateNo
   return res.json();
 }
 
+export interface ApiAgentConfig {
+  id: string;
+  agent_name: string;
+  model_id: string;
+  skill_content: string;
+  updated_at: string;
+}
+
+export interface ApiPendingChange {
+  id: string;
+  agent_name: string;
+  change_type: 'model_id' | 'skill_content';
+  old_value: string | null;
+  new_value: string;
+  status: 'pending' | 'approved' | 'rejected';
+  proposed_at: string;
+  reviewed_at: string | null;
+}
+
+export interface ApiAuditEntry {
+  id: string;
+  agent_name: string;
+  change_type: string;
+  old_value: string | null;
+  new_value: string;
+  action: 'approved' | 'rejected';
+  created_at: string;
+}
+
+export async function fetchAgentConfigs(): Promise<ApiAgentConfig[]> {
+  const res = await fetch(`${API_BASE_URL}/admin/agents`);
+  if (!res.ok) throw new Error(`GET /admin/agents failed: ${res.status}`);
+  return res.json();
+}
+
+export async function proposeAgentChange(
+  agentName: string,
+  changeType: 'model_id' | 'skill_content',
+  newValue: string,
+): Promise<ApiPendingChange> {
+  const res = await fetch(`${API_BASE_URL}/admin/agents/${agentName}/propose`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ change_type: changeType, new_value: newValue }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(`POST /admin/agents/${agentName}/propose failed: ${res.status} ${body ? JSON.stringify(body.detail) : ''}`);
+  }
+  return res.json();
+}
+
+export async function fetchPendingApprovals(): Promise<ApiPendingChange[]> {
+  const res = await fetch(`${API_BASE_URL}/admin/pending-approvals`);
+  if (!res.ok) throw new Error(`GET /admin/pending-approvals failed: ${res.status}`);
+  return res.json();
+}
+
+export async function resolvePendingChange(
+  changeId: string,
+  action: 'approve' | 'reject',
+): Promise<ApiPendingChange> {
+  const res = await fetch(`${API_BASE_URL}/admin/pending-approvals/${changeId}/${action}`, { method: 'POST' });
+  if (!res.ok) throw new Error(`POST /admin/pending-approvals/${changeId}/${action} failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchAuditLog(): Promise<ApiAuditEntry[]> {
+  const res = await fetch(`${API_BASE_URL}/admin/audit-log`);
+  if (!res.ok) throw new Error(`GET /admin/audit-log failed: ${res.status}`);
+  return res.json();
+}
+
 export interface ApiAgentActivity {
   thread_id: string;
   deal_id: string;

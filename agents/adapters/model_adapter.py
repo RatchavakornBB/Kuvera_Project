@@ -11,6 +11,7 @@ from functools import lru_cache
 
 import anthropic
 
+from agents.agent_config import get_agent_config
 from agents.config import settings
 
 # Which model_id each agent uses — the only place this is decided.
@@ -53,16 +54,27 @@ def call_model(
     """Dispatches a chat completion for `agent_name` to that agent's
     configured model_id. Returns the provider's native response object —
     single-provider for now, so no normalization layer exists yet
-    (add one only once a second provider is actually wired in)."""
+    (add one only once a second provider is actually wired in).
 
-    model_id = AGENT_MODELS.get(agent_name, DEFAULT_MODEL)
+    Looks up `agent_name`'s real, DB-stored config (agent_configs, governed
+    through the Admin & Skill Governance approval loop) on every call —
+    deliberately not cached across the process lifetime, so an approved
+    change is live on the very next call, not after a restart. Falls back
+    to the static AGENT_MODELS default only if no DB row exists yet."""
+
+    config = get_agent_config(agent_name)
+    model_id = config["model_id"] if config else AGENT_MODELS.get(agent_name, DEFAULT_MODEL)
+    skill_content = (config.get("skill_content") or "").strip() if config else ""
+
+    effective_system = f"{skill_content}\n\n{system}" if skill_content and system else skill_content or system
+
     provider = _provider_for(model_id)
 
     if provider == "anthropic":
         client = _anthropic_client()
         kwargs: dict = {"model": model_id, "max_tokens": max_tokens, "messages": messages}
-        if system:
-            kwargs["system"] = system
+        if effective_system:
+            kwargs["system"] = effective_system
         if tools:
             kwargs["tools"] = tools
         return client.messages.create(**kwargs)

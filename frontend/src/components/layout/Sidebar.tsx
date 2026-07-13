@@ -4,6 +4,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/documents', label: 'Documents & Contracts' },
   { to: '/agent-hub', label: 'Agent Hub' },
+  { to: '/admin', label: 'Admin' },
 ];
 
 export function Sidebar() {

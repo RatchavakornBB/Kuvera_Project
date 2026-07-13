@@ -1,16 +1,21 @@
 ## Current
-Phase: 5 (Polish & Rehearsal) — COMPLETE 2026-07-13. The entire 5-day build plan is now done.
-Active task: none
-Status: idle
-Last checkpoint commit: 2252b95
+Phase: 6 (post-5-day-plan extension) — the 5-day plan finished 2026-07-13, then the user
+explicitly asked to build Admin & Skill Governance (previously a design-only candidate).
+Real-scoped per AskUserQuestion confirmation: Agents & Models + Skills + Pending Approvals +
+Audit Log tabs, real DB-backed, wired into the actual call_model() chokepoint. Knowledge Base
+tab and eval pass-rate bar explicitly excluded — nothing real backs them (no Knowledge Agent,
+no eval framework exist anywhere in this codebase).
+Active task: phase5-006-admin-skill-governance (mid-build: migration done, wiring call_model() now)
+Status: in_progress
+Last checkpoint commit: d0f9254
 Blocked on: nothing
 
 ## Next up
-Nothing scheduled. Open backlog items, not pulled in unless the user asks:
-phase5-admin-skill-governance (design-only candidate — needs its own user decision), and the
-already-itemized Live vs. Design-only gaps in docs/demo-script.md (Drafting Lead,
-Knowledge/Learning Agent, RBAC, real pgvector semantic search, full Agent Hub live-graph view,
-true scheduled cron for the key-date notifier). Otherwise: awaiting user direction.
+Finish phase5-006: call_model() DB integration, backend routes, frontend /admin screen, then a
+real end-to-end verification (approve a skill change, confirm the next real Claude API call
+actually carries it). phase5-007 (cross-deal document isolation fix in /deals/{id}/analyze) is
+already done and pushed — found during a user-requested audit of every node's data-access
+pattern that led into this task.
 
 ## Open questions for user
 - none currently open
@@ -20,7 +25,10 @@ true scheduled cron for the key-date notifier). Otherwise: awaiting user directi
 - `.env`: real ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_KEY, DATABASE_URL. Never print/log/commit.
 - Schema: 11 tables (8 core + `analyses` + `documents.clauses`). New `public` tables need `GRANT ... TO service_role` (D-005).
 - `supabase/seed.sql`: demo user + 3 deals (Deal A, Horizon Freight Corp, Nova Fintech). Deal A has real uploaded documents/contracts + analyses from Phase 2/3 testing — good real data for Deal Detail screens.
-- Backend routes: `/health`, `/deals` (CRUD), `/deals/{id}/documents`, `/deals/{id}/analyze`, `/contracts`, `/deals/{id}/ask`, `/chat` (WebSocket). `sys.path` self-bootstraps (D-009).
+- Backend routes: `/health`, `/deals` (CRUD + `/deals/{id}/tasks`), `/deals/{id}/documents`,
+  `/deals/{id}/analyze` + `/deals/{id}/analysis` (GET, hydrate without a fresh LLM run),
+  `/documents` (cross-deal), `/contracts`, `/deals/{id}/ask`, `/chat` (WebSocket),
+  `/agent-hub/activity`, `/notifications/key-dates`. `sys.path` self-bootstraps (D-009).
 - Agents: every node wraps its FULL body in `with_retry` (D-008/D-010). `agents/deal_context.py` structurally enforces deal_id scoping — never weaken this.
 - `/chat` is request/response, not streaming (D-012).
 - Frontend routes (App.tsx): `/` (Dashboard), `/deals/:id` (Deal Detail, 4 tabs), `/documents`
