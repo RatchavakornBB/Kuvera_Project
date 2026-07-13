@@ -3,6 +3,7 @@ import { AppShell } from './components/layout/AppShell';
 import { Dashboard } from './pages/Dashboard';
 import { DealDetail } from './pages/DealDetail';
 import { DocumentsContracts } from './pages/DocumentsContracts';
+import { AgentHub } from './pages/AgentHub';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/deals/:id" element={<DealDetail />} />
           <Route path="/documents" element={<DocumentsContracts />} />
+          <Route path="/agent-hub" element={<AgentHub />} />
         </Route>
       </Routes>
     </BrowserRouter>

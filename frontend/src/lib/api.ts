@@ -165,6 +165,26 @@ export async function fetchLatestAnalysis(dealId: string): Promise<ApiAnalysis |
   return res.json();
 }
 
+export interface ApiAgentActivity {
+  thread_id: string;
+  deal_id: string;
+  document_id: string | null;
+  node: string;
+  status: 'success' | 'failed';
+  ts: string;
+  step: number | null;
+  deal_name: string | null;
+  document_name: string | null;
+}
+
+export async function fetchAgentActivity(limit = 50): Promise<ApiAgentActivity[]> {
+  const res = await fetch(`${API_BASE_URL}/agent-hub/activity?limit=${limit}`);
+  if (!res.ok) {
+    throw new Error(`GET /agent-hub/activity failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function createTask(
   dealId: string,
   body: { text: string; owner_id?: string | null; due_date?: string | null },
