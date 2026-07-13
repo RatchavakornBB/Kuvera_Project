@@ -6,17 +6,19 @@ Lead, [5] Agent Hub full view, [6] Key-date notifier true cron, [7] Eval pass-ra
 [8] Documents & Contracts semantic search. Proceeding through the list without per-item
 re-confirmation per the user's instruction — only stopping to ask when something is a genuine
 blocker (e.g. needed a real API key for phase5-009's Voyage embeddings).
-Active task: phase6-004-drafting-lead (next in the ordered list)
+Active task: phase6-005-agent-hub-full-view (next in the ordered list)
 Status: in_progress
-Last checkpoint commit: 9daf9f2
+Last checkpoint commit: 6bee881
 Blocked on: nothing
 
 ## Next up
-phase6-004 (Drafting Lead) through phase6-008 (Documents & Contracts semantic search), in the
-order above. Note logged in phase6-002/003's reports: once phase6-006 (Key-date notifier's real
-scheduler) exists, retrofit it to also call refresh_industry_brief()/refresh_competitor_brief()
+phase6-005 (Agent Hub full view) through phase6-008 (Documents & Contracts semantic search), in
+the order above. Note logged in phase6-002/003's reports: once phase6-006 (Key-date notifier's
+real scheduler) exists, retrofit it to also call refresh_industry_brief()/refresh_competitor_brief()
 (agents/industry_brief.py) and run_learning_cycle() (agents/learning_agent.py) on a real interval —
 right now all three are on-demand only.
+phase6-004 also fixed a real pre-existing gap: no document download mechanism existed anywhere in
+the app before — GET /documents/{id}/download now exists and is wired into every document list.
 
 ## Open questions for user
 - none currently open
@@ -26,8 +28,8 @@ right now all three are on-demand only.
 - `.env`: real ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_KEY, DATABASE_URL, VOYAGER_API_KEY (sic —
   not VOYAGE_API_KEY, matches what agents/config.py actually reads). Never print/log/commit.
 - Schema: 16 tables (8 core + `analyses` + `documents.clauses` + `agent_configs` +
-  `pending_changes` + `audit_log` + `knowledge_base` + `contradictions` + `learning_digests`).
-  New `public` tables need
+  `pending_changes` + `audit_log` + `knowledge_base` + `contradictions` + `learning_digests`;
+  Drafting Lead reuses `documents`, no new table). New `public` tables need
   `GRANT ... TO service_role` (D-005). Apply new migrations with `supabase migration up`, never
   `db reset`, once real accumulated test/demo data exists (a reset wipes it).
 - `agents/contradictions.py`: real pgvector-matched corroboration (threshold 0.70, calibrated

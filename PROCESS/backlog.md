@@ -118,5 +118,13 @@ approval queue a human uses via the Skills tab. Verified with a real
 Thailand PDPA regulatory research cycle that correctly proposed a
 specific, grounded addition to risk_flagger's skill.
 
+phase6-004-drafting-lead — real .docx/.pptx generation (python-docx/
+python-pptx, new dependencies) from a deal's real stored analysis, plus
+a real cover email draft and a NotebookLM-style source-cited summary
+built from real risk_flags source_excerpts. Found and fixed a real
+pre-existing gap along the way: no document download mechanism existed
+anywhere in the app — added a real backend-mediated
+GET /documents/{id}/download and wired it into every document list.
+
 Eval pass-rate bar remains the one piece of the Admin spec not built —
 no eval framework exists anywhere in this codebase (see phase6-007).
