@@ -209,3 +209,17 @@ Verified a real WebSocket round-trip correctly proved the single-deal
 invariant survived the rework: asking "What deals are in the
 portfolio?" with Deal A selected as the Source produced a real refusal
 to see beyond that one deal.
+
+phase7-002-docx-document-support — user asked if files could support
+.docx. Added real text extraction via python-docx (already a
+dependency from Drafting Lead) to agents/documents.py's single
+content-block chokepoint, so every document-reading node gained
+support with zero per-node changes. Verified through the real live
+/deals/{id}/analyze API twice: once against a pre-existing real .docx,
+once against a brand-new one with specific real financial figures —
+got back a real summary, real risk flags, and a real correctly-
+detected contradiction against Deal A's differently-figured prior
+analysis. Hit and recovered from the known "backend needs a restart to
+pick up code changes" gotcha mid-verification. Audio/video remain
+genuinely unsupported — no real transcription pipeline exists to
+bridge them honestly.

@@ -1,19 +1,27 @@
 ## Current
-Phase 6 (post-5-day-plan extension) is fully complete (see prior entries below). Phase 7 has now
-started: user reported the Chat page "didn't exist" and provided a reference screenshot of a
-full-page NotebookLM-style Chat interface (Sources panel, mode tabs), which doesn't match
-ux-ui-spec.md 3.3's written "slide-out panel" spec. Clarified scope first (the mockup's Sources
-list implied multi-deal selection, which conflicts with the deal_id scoping invariant), then built
-phase7-001: a real dedicated /chat page + /today + /daily-digest pages, all reusing existing real
-backend endpoints, no fabricated data or fake RBAC.
-Active task: none (phase7-001 complete)
+Phase 6 (post-5-day-plan extension) is fully complete (see prior entries below). Phase 7 is
+underway: phase7-001 rebuilt Chat as a real dedicated page (see below), phase7-002 added real
+.docx document support to the Analyst Lead pipeline (user asked "ทำให้ไฟล์รองรับ Docx ได้มั้ย").
+Nothing currently in progress.
+Active task: none
 Status: idle
-Last checkpoint commit: 5cb82d1
+Last checkpoint commit: ca32727
 Blocked on: nothing
 
 ## Next up
 Nothing queued. If the user wants further work, check PROCESS/backlog.md's Done section for full
 history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+phase7-002 added real .docx support to agents/documents.py::build_content_block() — Claude has no
+native Word-document content block, so real text is extracted via python-docx (already a
+dependency from phase6-004's Drafting Lead, used the opposite direction there) and sent as a text
+block. Every document-reading node (doc_summarizer/risk_flagger/contract_summarizer/
+clause_extractor) needed zero changes since they all already just spread build_content_block()'s
+output into a content array — the single-chokepoint design paid off. Verified through the real
+live /analyze API end to end (not just the extraction function): a real new .docx with real
+financial figures produced a real summary, real risk flags, and a real correctly-detected
+contradiction against Deal A's differently-figured prior analysis. Hit and recovered from the
+known "backend wasn't restarted so still running old code" gotcha mid-verification — recognized
+the stale error text immediately rather than assuming the fix was wrong.
 phase7-001 replaced the old slide-out ChatPanel.tsx (now deleted) with a real routed /chat page:
 Sources panel (real fetchDeals(), single-select — NOT multi-deal, per explicit user confirmation
 that the deal_id scoping invariant stays intact), 4 cosmetic mode tabs (Concierge/Analyst/
@@ -99,8 +107,10 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   (agents/adapters/model_adapter.py) now reads real DB-backed model_id/skill_content from
   `agent_configs` on every call — the Admin & Skill Governance chokepoint, never bypass it.
   `agents/documents.py::build_content_block()` is the one place a document's bytes become a
-  Claude content block (PDF -> `document`, image -> `image`) — every document-reading node uses
-  it, don't hardcode block shapes in a node again. `agents/knowledge.py` is the Knowledge Agent:
+  Claude content block (PDF -> `document`, image -> `image`, docx -> `text` via real python-docx
+  extraction since phase7-002 — audio/video still genuinely unsupported, no real transcription
+  pipeline exists) — every document-reading node uses it, don't hardcode block shapes in a node
+  again. `agents/knowledge.py` is the Knowledge Agent:
   `promote_deal_to_knowledge()` (real Claude synthesis + real Voyage embeddings, called from
   `POST /deals/{id}/close`) and `search_knowledge()` / `historical_precedent_context()` (real
   pgvector cosine search, the latter used inside risk_flagger/pricing_advisor, best-effort/
