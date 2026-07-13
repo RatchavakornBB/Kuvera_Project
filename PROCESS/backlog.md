@@ -134,5 +134,14 @@ call_model() to log every real invocation (agent_invocations table) so
 all 13 agents get real status, not just the 4 Analyst Lead nodes the
 older checkpoint-based log could see.
 
+phase6-006-key-date-scheduler — real backend/app/scheduler.py
+(BackgroundScheduler wired to FastAPI startup/shutdown): key-date
+checks every 5min, Industry Brief refresh every 24h. Verified past
+"the endpoint works" to the actual timer mechanism (an isolated
+scheduler instance fired 4 real times in 9s). Closes the "on-demand,
+not a cron" deviation from phase4-004/phase6-002. Also found and fixed
+two stale demo-script.md entries (Agent Hub, Learning Agent) still
+describing pre-phase6-003/005 state.
+
 Eval pass-rate bar remains the one piece of the Admin spec not built —
 no eval framework exists anywhere in this codebase (see phase6-007).

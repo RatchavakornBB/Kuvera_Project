@@ -6,19 +6,19 @@ Lead, [5] Agent Hub full view, [6] Key-date notifier true cron, [7] Eval pass-ra
 [8] Documents & Contracts semantic search. Proceeding through the list without per-item
 re-confirmation per the user's instruction — only stopping to ask when something is a genuine
 blocker (e.g. needed a real API key for phase5-009's Voyage embeddings).
-Active task: phase6-006-key-date-notifier-scheduler (next in the ordered list)
+Active task: phase6-007-eval-framework (next in the ordered list)
 Status: in_progress
-Last checkpoint commit: 4890347
+Last checkpoint commit: bf08aad
 Blocked on: nothing
 
 ## Next up
-phase6-006 (Key-date notifier true scheduler) through phase6-008 (Documents & Contracts semantic
-search), in the order above. phase6-006 should retrofit refresh_industry_brief()/
-refresh_competitor_brief() (agents/industry_brief.py) and run_learning_cycle()
-(agents/learning_agent.py) onto the real scheduler it builds — both are on-demand only right now,
-flagged in phase6-002/003's reports.
-phase6-004 also fixed a real pre-existing gap: no document download mechanism existed anywhere in
-the app before — GET /documents/{id}/download now exists and is wired into every document list.
+phase6-007 (Eval pass-rate bar in Admin) then phase6-008 (Documents & Contracts semantic search) —
+last two items in the user's ordered list.
+phase6-006 built a real backend/app/scheduler.py (BackgroundScheduler, wired to FastAPI startup/
+shutdown): key_date_check every 5min, industry_brief_refresh every 24h. Learning Agent stays
+on-demand deliberately (needs a real topic). Real `scheduled_run_log` table is the audit trail.
+phase6-004 fixed a real pre-existing gap: no document download mechanism existed anywhere in the
+app before — GET /documents/{id}/download now exists and is wired into every document list.
 phase6-005 instrumented call_model() itself with real activity_tracker logging — every agent now
 has a real status trail, not just the 4 Analyst Lead nodes.
 
@@ -31,7 +31,8 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   not VOYAGE_API_KEY, matches what agents/config.py actually reads). Never print/log/commit.
 - Schema: 16 tables (8 core + `analyses` + `documents.clauses` + `agent_configs` +
   `pending_changes` + `audit_log` + `knowledge_base` + `contradictions` + `learning_digests` +
-  `agent_invocations`; Drafting Lead reuses `documents`, no new table). New `public` tables need
+  `agent_invocations` + `scheduled_run_log`; Drafting Lead reuses `documents`, no new table).
+  New `public` tables need
   `GRANT ... TO service_role` (D-005). Apply new migrations with `supabase migration up`, never
   `db reset`, once real accumulated test/demo data exists (a reset wipes it).
 - `agents/contradictions.py`: real pgvector-matched corroboration (threshold 0.70, calibrated
