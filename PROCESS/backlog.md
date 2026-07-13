@@ -84,6 +84,14 @@ requested audit of every node's data-access pattern), phase5-006 (Admin &
 Skill Governance, real-scoped: Agents & Models / Skills / Pending Approvals /
 Audit Log, all DB-backed and wired into the real call_model() chokepoint,
 verified by approving a real skill change and confirming it changed a real
-Claude API call). Knowledge Base tab and eval pass-rate bar deliberately
-excluded from the build — no Knowledge Agent or eval framework exist to back
-them honestly.
+Claude API call), phase5-008 (real image file support for the 4 document-
+reading nodes via Claude's native `image` content block, verified with a real
+generated test image; audio/video deliberately left unsupported — no native
+Claude content block for either), phase5-009 (full Knowledge Agent including
+real pgvector semantic search via Voyage AI embeddings — a real "Close Deal"
+action promotes actual deal data via a real Claude synthesis call,
+risk_flagger/pricing_advisor retrieve real historical precedent automatically,
+Admin's Knowledge Base tab is real and searchable; Industry/Competitor/Company
+Insight deliberately not populated — need a periodic cross-deal Brief pipeline
+this MVP doesn't have). Eval pass-rate bar remains the one piece of the
+Admin spec not built — no eval framework exists anywhere in this codebase.
