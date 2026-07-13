@@ -1,21 +1,18 @@
 ## Current
-Phase: 6 (post-5-day-plan extension) — the 5-day plan finished 2026-07-13, then the user
-explicitly asked to build Admin & Skill Governance (previously a design-only candidate).
-Real-scoped per AskUserQuestion confirmation: Agents & Models + Skills + Pending Approvals +
-Audit Log tabs, real DB-backed, wired into the actual call_model() chokepoint. Knowledge Base
-tab and eval pass-rate bar explicitly excluded — nothing real backs them (no Knowledge Agent,
-no eval framework exist anywhere in this codebase).
-Active task: phase5-006-admin-skill-governance (mid-build: migration done, wiring call_model() now)
-Status: in_progress
-Last checkpoint commit: d0f9254
+Phase: 6 (post-5-day-plan extension) — COMPLETE 2026-07-13. Admin & Skill Governance built and
+verified real at the user's explicit request; docs/demo-script.md updated to reflect it (moved
+from Design-only to Live, added an optional bonus demo step).
+Active task: none
+Status: idle
+Last checkpoint commit: 9e5475e (will update after this close-out commit)
 Blocked on: nothing
 
 ## Next up
-Finish phase5-006: call_model() DB integration, backend routes, frontend /admin screen, then a
-real end-to-end verification (approve a skill change, confirm the next real Claude API call
-actually carries it). phase5-007 (cross-deal document isolation fix in /deals/{id}/analyze) is
-already done and pushed — found during a user-requested audit of every node's data-access
-pattern that led into this task.
+Nothing scheduled. Open backlog items, not pulled in unless the user asks: the remaining
+Design-only gaps in docs/demo-script.md's Live vs. Design-only table (Drafting Lead,
+Knowledge/Learning Agent, RBAC, real pgvector semantic search, full Agent Hub live-graph view,
+true scheduled cron for the key-date notifier, Knowledge Base tab / eval scoring within Admin).
+Otherwise: awaiting user direction.
 
 ## Open questions for user
 - none currently open

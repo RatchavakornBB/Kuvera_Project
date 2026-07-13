@@ -1,7 +1,7 @@
 # PROCESS/backlog.md — ready / blocked / deferred work
 
 ## Ready
-- [ ] phase5-admin-skill-governance — Admin & Skill Governance screen (design-only candidate — check with user whether this stays design-only per the MVP scope table before building).
+- (none currently open)
 
 ## Blocked
 - (none)
@@ -77,3 +77,13 @@ phase5-002 (Kanban scroll-affordance fade, real scroll tracking), phase5-003
 Q&A), phase5-004 (real timed Playwright rehearsal of the full script, 9.5s
 total mechanical time), phase5-005 (cloud deploy explicitly skipped per user
 decision). The full 5-day build plan is now complete.
+
+Phase 6 (post-5-day-plan extension, user-requested) — phase5-007 (fixed a real
+cross-deal document isolation gap in /deals/{id}/analyze, found during a
+requested audit of every node's data-access pattern), phase5-006 (Admin &
+Skill Governance, real-scoped: Agents & Models / Skills / Pending Approvals /
+Audit Log, all DB-backed and wired into the real call_model() chokepoint,
+verified by approving a real skill change and confirming it changed a real
+Claude API call). Knowledge Base tab and eval pass-rate bar deliberately
+excluded from the build — no Knowledge Agent or eval framework exist to back
+them honestly.

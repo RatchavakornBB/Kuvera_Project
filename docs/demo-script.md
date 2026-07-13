@@ -39,6 +39,19 @@ it questions about the deal in plain language."
 | 12 | Sidebar → **Agent Hub** | "This is a real trace of what the Analyst Lead actually did — reconstructed from LangGraph's own Postgres checkpoint state, not a separate log I wrote by hand. Every row here is a real historical run." | Operational transparency — proves the multi-agent claim isn't just marketing |
 | 13 | Back to Dashboard | "And that's the full loop — pipeline, deal, documents, AI analysis, chat, all one system." | Close the loop |
 
+### Optional bonus step (~2 min, if time and interest allow)
+
+| # | Screen / action | What to say | Why it matters |
+|---|---|---|---|
+| 14 | Sidebar → **Admin** → **Skills** tab | "This is real governance, not a mockup — pick an agent, edit its instructions." Select an agent, type a one-line addition, show the real diff view. | Sets up the payoff in step 15 |
+| 15 | **Propose change** → **Pending Approvals** tab → **Approve** | "Nothing takes effect until it's approved — same pattern a PR review would use." Approve it. | Shows the review gate is real, not decorative |
+| 16 | **Audit Log** tab | "And it's logged — who changed what, when." Point at the real timestamped entry. | Closes the governance loop visibly |
+
+Note: the change only takes effect on the *next* real Analyst Lead run for that agent — don't
+re-trigger a live analysis just to prove it (see the "do not click Regenerate live" note above).
+If asked "does this actually work," the honest answer is yes, and it was verified with a raw
+`call_model()` test during development, not just this UI.
+
 ## 4. Live vs. design-only — have this ready if asked directly
 
 | Feature | Status |
@@ -50,7 +63,7 @@ it questions about the deal in plain language."
 | Key-date notifier | **Live**, but on-demand/polled, not a true server cron (no task-queue infra in a 5-day build) |
 | Agent Hub | **Live**, but a static activity log reconstructed from checkpoints — not the full 21-agent grid / live graph view from the design doc |
 | Semantic document search | **Not live** — substring search on name/summary; real pgvector semantic search needs an embeddings pipeline not built in this MVP |
-| Admin & Skill Governance screen | **Design-only** — not built, open backlog item |
+| Admin & Skill Governance (Agents & Models, Skills, Pending Approvals, Audit Log) | **Live** — real DB-backed config wired into the actual `call_model()` call; an approved skill/model change genuinely changes the next real Claude API call. Verified by approving a real skill change and confirming the next Claude response reflected it. Knowledge Base tab and eval pass-rate bar are not built — nothing real backs either (no Knowledge Agent, no eval framework) |
 | Drafting Lead (5.1 doc/email prep, 5.2 deck prep) | **Design-only** — not built |
 | Knowledge Agent / Learning Agent (background promotion + outside-world ingestion) | **Design-only** — not built |
 | Full contradiction/hypothesis confidence-scoring engine | **Design-only** — the *lightweight* version (a visible flag, no scoring) is live |
@@ -65,9 +78,11 @@ it questions about the deal in plain language."
 - **"What about role-based access / multiple users?"** — "Not built in this MVP — there's one demo
   user and no login screen. The schema has an `owner_id` on every deal, so RBAC is a real next step,
   not a redesign."
-- **"What about the Skill governance / model-swap admin screen?"** — "Design-only right now. The
-  `skill.md` + `model_id` governance pattern is in the architecture doc, but building the actual
-  approval-queue UI wasn't in scope for a 5-day build — happy to walk through the design."
+- **"What about the Skill governance / model-swap admin screen?"** — "That's actually live now — the
+  Admin screen. I can propose a skill change for an agent, approve it, and the very next real Claude
+  call for that agent uses it — I verified that end to end. The Knowledge Base tab and eval
+  pass-rate scoring from the design doc aren't built, since there's no Knowledge Agent or eval
+  framework yet to honestly back them."
 - **"Does the Agent Hub show all 21 agents live?"** — "Right now it's a real activity log of the
   Analyst Lead's 4 nodes, reconstructed from LangGraph's own checkpoint state — genuinely real, not
   a mock, but scoped down from the full live-graph view in the design doc on purpose, per the
