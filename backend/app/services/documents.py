@@ -41,6 +41,19 @@ def upload_document(deal_id: str, filename: str, content: bytes, content_type: s
     return res.data[0]
 
 
+def get_latest_document(deal_id: str) -> dict[str, Any] | None:
+    client = get_client()
+    res = (
+        client.table("documents")
+        .select("*")
+        .eq("deal_id", deal_id)
+        .order("uploaded_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return res.data[0] if res.data else None
+
+
 def _infer_type(filename: str) -> str:
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     return {

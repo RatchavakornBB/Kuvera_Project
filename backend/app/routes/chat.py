@@ -1,0 +1,61 @@
+"""/chat WebSocket — system-architecture.md Section 4.4. Request/response
+over the WebSocket connection, not token streaming (D-012 — Concierge
+Q&A's structured tool-use output makes true streaming meaningfully more
+complex; this is timeline Section 7's own 4th cut-order item, invoked
+deliberately).
+
+deal_id is required for any answer — no deal_id means no answer, per
+AGENT.md Section 11's deal_id scope invariant extended to chat.
+"""
+
+from agents.errors import NodeFailure
+from agents.nodes.orchestrator import classify_intent
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from starlette.concurrency import run_in_threadpool
+
+from app.services import analyze as analyze_service
+from app.services import concierge as concierge_service
+from app.services import documents as documents_service
+
+router = APIRouter(tags=["chat"])
+
+
+async def _handle_message(deal_id: str | None, message: str) -> dict:
+    if not deal_id:
+        return {
+            "role": "assistant",
+            "text": "Which deal are you asking about? I can only answer questions scoped to one deal at a time.",
+        }
+
+    route = await run_in_threadpool(classify_intent, message)
+
+    if route == "analyst_lead":
+        doc = await run_in_threadpool(documents_service.get_latest_document, deal_id)
+        if doc is None:
+            return {"role": "assistant", "text": "There's no document uploaded for this deal yet to analyze."}
+        result = await run_in_threadpool(analyze_service.run_analysis, deal_id, doc["id"])
+        return {
+            "role": "assistant",
+            "text": f"Analysis complete on {doc['name']}. {result['summary'][:300]}...",
+            "artifact": {"title": f"{doc['name']} — IC memo draft", "type": "Doc"},
+        }
+
+    result = await run_in_threadpool(concierge_service.ask_about_deal, deal_id, message)
+    return {"role": "assistant", "text": result["answer"], "sources": result.get("sources", [])}
+
+
+@router.websocket("/chat")
+async def chat_websocket(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_json()
+            message = data.get("message", "")
+            deal_id = data.get("deal_id")
+            try:
+                response = await _handle_message(deal_id, message)
+            except NodeFailure as e:
+                response = {"role": "assistant", "text": f"Something went wrong: {e.reason} ({e.raw_error})"}
+            await websocket.send_json(response)
+    except WebSocketDisconnect:
+        pass

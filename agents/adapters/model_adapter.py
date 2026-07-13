@@ -20,6 +20,10 @@ AGENT_MODELS: dict[str, str] = {
     "risk_flagger": "claude-sonnet-5",
     "ic_memo_drafter": "claude-sonnet-5",
     "pricing_advisor": "claude-sonnet-5",
+    "contract_summarizer": "claude-sonnet-5",
+    "clause_extractor": "claude-sonnet-5",
+    "concierge_qa": "claude-sonnet-5",
+    "orchestrator": "claude-sonnet-5",
 }
 DEFAULT_MODEL = "claude-sonnet-5"
 
