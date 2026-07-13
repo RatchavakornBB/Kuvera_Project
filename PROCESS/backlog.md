@@ -2,21 +2,21 @@
 
 ## Ready
 - [ ] phase5-admin-skill-governance — Admin & Skill Governance screen (design-only candidate — check with user whether this stays design-only per the MVP scope table before building).
-- [ ] Phase 5 (Polish & Rehearsal) per 5day-build-timeline.md — not started: bug-fixing pass, visual polish (empty/loading states), demo script, rehearsal, optional cloud deploy.
 
 ## Blocked
 - (none)
+
+## Explicitly skipped (a decision, not an oversight)
+- Cloud deploy (5day-build-timeline.md's optional 15:30-17:00 Phase 5 block) — user confirmed
+  local + screen-share is sufficient for the interview (2026-07-13). Revisit only if the user
+  later wants a shareable URL.
 
 ## Deferred (found mid-task, not in that task's scope)
 - (none)
 
 ## Minor polish (accepted, not a functional bug)
-- Kanban board: 7 columns + the 240px Needs Attention rail don't all fit at once at typical
-  viewport widths. Proven via real DOM measurement (`getBoundingClientRect`/`scrollWidth`/
-  `clientWidth`) that the board is correctly bounded and the hidden column (Nova Fintech) is
-  fully reachable by scroll — not a data/overlap bug, just missing a scroll-affordance visual
-  hint (fade/shadow). `min-w-0` (AppShell) and `w-full` (KanbanBoard) fixes kept since they're
-  correct regardless, but they were not the actual explanation for the tight appearance.
+- (none currently open — the Kanban scroll-affordance gap logged here in Phase 1 was fixed in
+  phase5-002, see Done below)
 
 ## Done (Phases 1-3, for reference — see PROCESS/reports/ for full detail)
 Phase 1 (Foundations): environment setup, 8-table schema, seed data, design tokens,
@@ -69,3 +69,11 @@ phase4-005-full-integration-pass — one continuous real-browser session across
 the whole demo path (Dashboard views -> Deal Detail all 4 tabs -> Chat ->
 Documents & Contracts -> Agent Hub -> back). No breakage found; zero console
 errors. Phase 4 (Integration) is now complete.
+
+Phase 5 (Polish & Rehearsal) — phase5-001 (real bug found and fixed: CSS
+@import order; verified every empty state against real sparse-data deals),
+phase5-002 (Kanban scroll-affordance fade, real scroll tracking), phase5-003
+(docs/demo-script.md — click path, Live vs. Design-only table, rehearsed
+Q&A), phase5-004 (real timed Playwright rehearsal of the full script, 9.5s
+total mechanical time), phase5-005 (cloud deploy explicitly skipped per user
+decision). The full 5-day build plan is now complete.

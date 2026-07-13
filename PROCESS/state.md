@@ -1,14 +1,16 @@
 ## Current
-Phase: 5 (Polish & Rehearsal) — started 2026-07-13 per explicit user instruction ("ไป Phase 5 เลยละกัน").
-Active task: phase5-005-cloud-deploy-decision (asking user; timeline says skip if local+screen-share is enough)
-Status: in_progress
-Last checkpoint commit: 2e91c9f
-Blocked on: user decision on whether to pursue the optional cloud deploy block
+Phase: 5 (Polish & Rehearsal) — COMPLETE 2026-07-13. The entire 5-day build plan is now done.
+Active task: none
+Status: idle
+Last checkpoint commit: a338a50 (will update after this close-out commit)
+Blocked on: nothing
 
 ## Next up
-Awaiting user's answer on cloud deploy scope. Once resolved, Phase 5 (and the whole 5-day
-build) is complete. phase5-admin-skill-governance stays a separate open backlog question
-(design-only candidate), not pulled into this pass unless the user asks.
+Nothing scheduled. Open backlog items, not pulled in unless the user asks:
+phase5-admin-skill-governance (design-only candidate — needs its own user decision), and the
+already-itemized Live vs. Design-only gaps in docs/demo-script.md (Drafting Lead,
+Knowledge/Learning Agent, RBAC, real pgvector semantic search, full Agent Hub live-graph view,
+true scheduled cron for the key-date notifier). Otherwise: awaiting user direction.
 
 ## Open questions for user
 - none currently open
