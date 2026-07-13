@@ -68,6 +68,12 @@ def list_documents(
     return docs
 
 
+def get_document(document_id: str) -> dict[str, Any] | None:
+    client = get_client()
+    res = client.table("documents").select("*").eq("id", document_id).execute()
+    return res.data[0] if res.data else None
+
+
 def get_latest_document(deal_id: str) -> dict[str, Any] | None:
     client = get_client()
     res = (
