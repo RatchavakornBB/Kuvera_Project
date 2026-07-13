@@ -1,24 +1,26 @@
 ## Current
-Phase: 3 (Contracts, Concierge, Chat)
-Active task: phase3-001-contracts-lead
-Status: in_progress
-Last checkpoint commit: a0fddba
+Phase: 3 (Contracts, Concierge, Chat) — COMPLETE
+Active task: none
+Status: idle, ready to pull next task
+Last checkpoint commit: f3e24bc (phase3-006 not yet committed — next commit)
 Blocked on: nothing
 
 ## Next up
-phase3-002-concierge-qa, phase3-003-chat-panel, phase3-004-chat-websocket,
-phase3-005-web-search-edgar — per docs/5day-build-timeline.md Section 6 Phase 3.
-User asked to run through all of Phase 3 continuously (2026-07-13).
+Nothing pulled yet. backlog.md "Ready" has Phase 4 items (Deal Detail, Documents &
+Contracts screen, Agent Hub, Key-date notifier) plus the still-open phase1-007
+(Table/Pipeline view) and a Phase 5 admin-screen scope question. Ask the user which
+to prioritize.
 
 ## Open questions for user
-- none currently open
+- Whether Admin & Skill Governance should be built or stay design-only (system
+  design's MVP scope table doesn't explicitly rule on it) — not asked yet.
 
 ## Environment notes (read before assuming state)
-- Local Supabase for this project runs on shifted ports 55321 (API), 55322 (DB), 55323 (Studio), 55324 (Inbucket/SMTP), 55327 (Analytics) — NOT the 54321 default (D-004).
-- Docker Desktop is not always running by default on this machine — check `docker ps` before assuming Supabase is up. After any `supabase db reset`, wait for all containers `(healthy)` before hitting Storage.
-- `.env` has real ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_KEY, DATABASE_URL. Never print/log/commit these.
-- Every new `public` table/migration needs its own `GRANT ... TO service_role` block (D-005).
-- `supabase/seed.sql`: demo user (demo@kuvera.capital / kuvera-demo) + 3 deals (Deal A, Horizon Freight Corp, Nova Fintech).
-- Backend: `/health`, `/deals` (GET/POST/{id}), `/deals/{id}/documents` (upload), `/deals/{id}/analyze` (full Analyst Lead graph, ~45s). `sys.path` self-bootstraps in main.py (D-009) for the agents/ cross-package import.
-- Agents (`agents/`): standalone, own config/db (D-007). Every node MUST wrap its full body (fetches + model call + parsing) in `with_retry`, not just the model call (D-008, D-010). doc_summarizer/risk_flagger/ic_memo_drafter/pricing_advisor + graph.py (gate + Send() fan-out, Postgres Checkpointer) all done and verified in Phase 2.
-- Frontend Dashboard (Board/Kanban) wired to real `/deals`. Table/Pipeline/Chat/Deal Detail/Documents/Agent Hub/Admin screens still unbuilt.
+- Local Supabase: ports 55321 (API)/55322 (DB)/55323 (Studio)/55324 (Inbucket)/55327 (Analytics) — NOT the 54321 default (D-004). Check `docker ps` before assuming it's up; wait for `(healthy)` after any `db reset` before hitting Storage.
+- `.env`: real ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_KEY, DATABASE_URL. Never print/log/commit these.
+- Schema: 11 tables now (8 core + `analyses` + `documents.clauses` column added via migration). New `public` tables need `GRANT ... TO service_role` (D-005).
+- `supabase/seed.sql`: demo user (demo@kuvera.capital / kuvera-demo) + 3 deals. Seeded `auth.users` needs every `*_token`/`email_change*` column `''` not NULL (D-006).
+- Backend routes: `/health`, `/deals` (CRUD), `/deals/{id}/documents` (upload), `/deals/{id}/analyze` (full Analyst Lead graph), `/contracts` (4.1+4.2), `/deals/{id}/ask` (Concierge Q&A), `/chat` (WebSocket — Orchestrator routes to concierge_qa/analyst_lead/web_research). `sys.path` self-bootstraps in main.py (D-009).
+- Agents (`agents/`): standalone, own config/db (D-007). Every node MUST wrap its FULL body in `with_retry`, not just the model call (D-008/D-010). `agents/deal_context.py` is how the deal_id scope invariant is enforced STRUCTURALLY (never fetches another deal's rows) — this is the one thing to never weaken. `agents/tools/sec_edgar.py` does real un-keyed SEC API calls; its company-name matching had a real false-positive bug (D-noted in phase3-006 report) fixed via word-boundary matching + a stoplist.
+- `/chat` is request/response, NOT token streaming (D-012, deliberate cut-order item).
+- Frontend: Dashboard (Board/Kanban) + full Chat panel (real WebSocket, deal-context-aware) both wired to real backend data. Table/Pipeline view, Deal Detail, Documents & Contracts screen, Agent Hub, Admin screens still unbuilt (all still just the mockup + written spec).

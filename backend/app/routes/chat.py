@@ -10,6 +10,7 @@ AGENT.md Section 11's deal_id scope invariant extended to chat.
 
 from agents.errors import NodeFailure
 from agents.nodes.orchestrator import classify_intent
+from agents.nodes.web_research import web_research
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from starlette.concurrency import run_in_threadpool
 
@@ -28,6 +29,11 @@ async def _handle_message(deal_id: str | None, message: str) -> dict:
         }
 
     route = await run_in_threadpool(classify_intent, message)
+
+    if route == "web_research":
+        result = await run_in_threadpool(web_research, message)
+        sources = [c["url"] for c in result["citations"] if c.get("url")]
+        return {"role": "assistant", "text": result["answer"], "sources": sources}
 
     if route == "analyst_lead":
         doc = await run_in_threadpool(documents_service.get_latest_document, deal_id)
