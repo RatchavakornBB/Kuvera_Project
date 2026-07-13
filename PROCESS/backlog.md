@@ -1,7 +1,6 @@
 # PROCESS/backlog.md — ready / blocked / deferred work
 
 ## Ready
-- [ ] phase4-003-agent-hub — static activity log table. Real data to read now exists: LangGraph's `checkpoints`/`checkpoint_writes` tables (Postgres Checkpointer, live since Phase 2) actually recorded every node run across all the Phase 2/3 testing.
 - [ ] phase4-004-key-date-notifier — 4.3 Key-date notifier (system-architecture.md Section 8), deferred out of phase3-001 since it's explicitly a "scheduled background check," different infrastructure than the ingest-triggered 4.1/4.2.
 - [ ] phase5-admin-skill-governance — Admin & Skill Governance screen (design-only candidate — check with user whether this stays design-only per the MVP scope table before building).
 
@@ -54,3 +53,9 @@ table with 30-day key-date countdown badges, detail side panel with real extract
 clauses, upload modal reusing the existing real upload path, key-dates banner.
 Deviation: substring search, not real pgvector semantic search (no embeddings
 pipeline exists in this MVP); no approval-status change history (no audit-log table).
+
+phase4-003-agent-hub — static activity log reading the real LangGraph Postgres
+Checkpointer state (not the full live-graph/21-agent-grid surface, per the
+timeline's own scoped-down instruction). Found and fixed a real bug: the
+parallel fan-out step writes two nodes into one checkpoint row, and the first
+pass only surfaced one of them.

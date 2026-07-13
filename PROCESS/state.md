@@ -1,15 +1,14 @@
 ## Current
 Phase: 4 (Integration)
-Active task: phase4-003-agent-hub (read-only LangGraph checkpoint monitoring surface)
+Active task: phase4-004-key-date-notifier
 Status: in_progress
-Last checkpoint commit: 6a69c2b
+Last checkpoint commit: 35dfe0a
 Blocked on: nothing
 
 ## Next up
-phase4-003-agent-hub, phase4-004-key-date-notifier, then a full integration pass
-(Dashboard -> Deal Detail -> Chat, uninterrupted). Deal Detail (all 4 tabs) and the
-Documents & Contracts screen are now fully built. User asked to do all of this
-continuously (2026-07-13).
+phase4-004-key-date-notifier, then a full integration pass (Dashboard -> Deal Detail
+-> Chat, uninterrupted). All of Deal Detail, Documents & Contracts, and Agent Hub are
+now built. User asked to do all of this continuously (2026-07-13).
 
 ## Open questions for user
 - none currently open
