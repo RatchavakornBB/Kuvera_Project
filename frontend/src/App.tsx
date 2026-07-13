@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { KanbanBoard } from './components/KanbanBoard';
 import { ChatPanel } from './components/chat/ChatPanel';
 import { buildStageSegments } from './lib/dealStage';
 import { fetchDeals, type ApiDeal } from './lib/api';
+import { useChatSocket } from './lib/useChatSocket';
 import type { DealCardData } from './components/DealCard';
-import type { ChatMessageData } from './components/chat/ChatMessage';
 
 function toDealCardData(deal: ApiDeal): DealCardData {
   return {
@@ -18,22 +19,17 @@ function toDealCardData(deal: ApiDeal): DealCardData {
   };
 }
 
-const sampleMessages: ChatMessageData[] = [
-  { id: '1', role: 'assistant', text: 'Hi, I’m your Kuvera Assistant. Ask me about any deal, document, or company in the portfolio.' },
-  { id: '2', role: 'user', text: 'What’s the status of Deal A?' },
-  {
-    id: '3',
-    role: 'assistant',
-    text: 'Deal A is in Due Diligence and On track. The biggest open item is the outstanding FY2025 audited financial statements — I put together a draft IC memo covering the current risks.',
-    artifact: { title: 'Deal A — IC memo draft', type: 'Doc' },
-  },
-];
+const DEAL_A_ID = 'd0000000-0000-0000-0000-00000000000a';
 
 function App() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['deals'],
     queryFn: fetchDeals,
   });
+
+  const { messages, busy, send } = useChatSocket();
+  const [dealContextId, setDealContextId] = useState<string | undefined>(DEAL_A_ID);
+  const dealContextLabel = dealContextId ? data?.find((d) => d.id === dealContextId)?.name : undefined;
 
   return (
     <div className="flex min-h-screen bg-terminal-black text-[#e7e7ea]">
@@ -43,14 +39,17 @@ function App() {
 
         {isLoading && <div className="text-xs text-gray">Loading deals…</div>}
         {isError && <div className="text-xs text-red">Failed to load deals: {String(error)}</div>}
-        {data && <KanbanBoard deals={data.map(toDealCardData)} onOpenDeal={(id) => console.log('open deal', id)} />}
+        {data && (
+          <KanbanBoard deals={data.map(toDealCardData)} onOpenDeal={(id) => setDealContextId(id)} />
+        )}
       </div>
 
       <ChatPanel
-        messages={sampleMessages}
-        traceText="Routed to Analyst Lead → 3.1 → 3.2 → response synthesized"
-        dealContextLabel="Deal A"
-        onSend={(text) => console.log('send', text)}
+        messages={messages}
+        agentBusyLabel={busy ? 'Kuvera Assistant · thinking…' : undefined}
+        dealContextLabel={dealContextLabel}
+        onClearContext={() => setDealContextId(undefined)}
+        onSend={(text) => send(text, dealContextId)}
       />
     </div>
   );
