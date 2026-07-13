@@ -5,9 +5,16 @@ interface ChatComposerProps {
   onClearContext?: () => void;
   onSend: (text: string) => void;
   onAttachFile?: (file: File) => void;
+  placeholder?: string;
 }
 
-export function ChatComposer({ dealContextLabel, onClearContext, onSend, onAttachFile }: ChatComposerProps) {
+export function ChatComposer({
+  dealContextLabel,
+  onClearContext,
+  onSend,
+  onAttachFile,
+  placeholder = 'Ask about a deal, document, or company...',
+}: ChatComposerProps) {
   const [text, setText] = useState('');
 
   function send() {
@@ -45,7 +52,7 @@ export function ChatComposer({ dealContextLabel, onClearContext, onSend, onAttac
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
-          placeholder="Ask about a deal, document, or company..."
+          placeholder={placeholder}
           className="flex-1 rounded border border-grid bg-panel px-3.5 py-2.5 text-[13px] text-[#e7e7ea] outline-none"
         />
         <button

@@ -1,41 +1,46 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
-import { ChatPanel } from '../chat/ChatPanel';
 import { useChatSocket } from '../../lib/useChatSocket';
+import type { ChatMessageData } from '../chat/ChatMessage';
 
 export interface ShellContext {
   askAboutDeal: (dealId: string, dealName: string) => void;
+  chat: {
+    messages: ChatMessageData[];
+    busy: boolean;
+    send: (text: string, dealId?: string) => void;
+  };
+  selectedDeal?: { id: string; name: string };
+  setSelectedDeal: (deal: { id: string; name: string } | undefined) => void;
 }
 
 export function AppShell() {
-  const [chatOpen, setChatOpen] = useState(false);
-  const [dealContext, setDealContext] = useState<{ id: string; name: string } | undefined>();
+  const navigate = useNavigate();
+  const [selectedDeal, setSelectedDeal] = useState<{ id: string; name: string } | undefined>();
   const { messages, busy, send } = useChatSocket();
 
   const askAboutDeal: ShellContext['askAboutDeal'] = (dealId, dealName) => {
-    setDealContext({ id: dealId, name: dealName });
-    setChatOpen(true);
+    setSelectedDeal({ id: dealId, name: dealName });
+    navigate('/chat');
+  };
+
+  const context: ShellContext = {
+    askAboutDeal,
+    chat: { messages, busy, send },
+    selectedDeal,
+    setSelectedDeal,
   };
 
   return (
     <div className="flex h-screen flex-col bg-terminal-black text-[#e7e7ea]">
-      <TopBar onToggleChat={() => setChatOpen((v) => !v)} />
+      <TopBar />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar chatOpen={chatOpen} onToggleChat={() => setChatOpen((v) => !v)} />
+        <Sidebar />
         <div className="min-w-0 flex-1 overflow-y-auto">
-          <Outlet context={{ askAboutDeal } satisfies ShellContext} />
+          <Outlet context={context} />
         </div>
-        {chatOpen && (
-          <ChatPanel
-            messages={messages}
-            agentBusyLabel={busy ? 'Kuvera Assistant · thinking…' : undefined}
-            dealContextLabel={dealContext?.name}
-            onClearContext={() => setDealContext(undefined)}
-            onSend={(text) => send(text, dealContext?.id)}
-          />
-        )}
       </div>
     </div>
   );
