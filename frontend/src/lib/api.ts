@@ -432,6 +432,55 @@ export async function fetchAgentActivity(limit = 50): Promise<ApiAgentActivity[]
   return res.json();
 }
 
+export interface ApiAgentGridEntry {
+  agent_name: string;
+  lead: string;
+  model_id: string;
+  has_skill: boolean;
+  status: 'idle' | 'active' | 'error';
+  last_active: string | null;
+  error_reason: string | null;
+}
+
+export async function fetchAgentGrid(): Promise<ApiAgentGridEntry[]> {
+  const res = await fetch(`${API_BASE_URL}/agent-hub/grid`);
+  if (!res.ok) throw new Error(`GET /agent-hub/grid failed: ${res.status}`);
+  return res.json();
+}
+
+export interface ApiAgentInvocation {
+  id: string;
+  agent_name: string;
+  status: 'running' | 'success' | 'error';
+  error_reason: string | null;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface ApiAgentDetail {
+  agent_name: string;
+  lead: string;
+  recent_invocations: ApiAgentInvocation[];
+  sparkline_7day: number[];
+}
+
+export async function fetchAgentDetail(agentName: string): Promise<ApiAgentDetail> {
+  const res = await fetch(`${API_BASE_URL}/agent-hub/agents/${agentName}`);
+  if (!res.ok) throw new Error(`GET /agent-hub/agents/${agentName} failed: ${res.status}`);
+  return res.json();
+}
+
+export interface ApiAnalystLeadGraph {
+  nodes: { name: string; status: 'idle' | 'active' | 'error' }[];
+  edges: { from: string; to: string }[];
+}
+
+export async function fetchAnalystLeadGraph(): Promise<ApiAnalystLeadGraph> {
+  const res = await fetch(`${API_BASE_URL}/agent-hub/graph/analyst-lead`);
+  if (!res.ok) throw new Error(`GET /agent-hub/graph/analyst-lead failed: ${res.status}`);
+  return res.json();
+}
+
 export async function createTask(
   dealId: string,
   body: { text: string; owner_id?: string | null; due_date?: string | null },

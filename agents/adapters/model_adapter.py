@@ -11,6 +11,7 @@ from functools import lru_cache
 
 import anthropic
 
+from agents.activity_tracker import finish_invocation, start_invocation
 from agents.agent_config import get_agent_config
 from agents.config import settings
 
@@ -74,6 +75,7 @@ def call_model(
     effective_system = f"{skill_content}\n\n{system}" if skill_content and system else skill_content or system
 
     provider = _provider_for(model_id)
+    invocation_id = start_invocation(agent_name)
 
     if provider == "anthropic":
         client = _anthropic_client()
@@ -82,6 +84,13 @@ def call_model(
             kwargs["system"] = effective_system
         if tools:
             kwargs["tools"] = tools
-        return client.messages.create(**kwargs)
+        try:
+            response = client.messages.create(**kwargs)
+        except Exception as e:
+            finish_invocation(invocation_id, "error", str(e))
+            raise
+        finish_invocation(invocation_id, "success")
+        return response
 
+    finish_invocation(invocation_id, "error", f"Provider '{provider}' is not wired up yet")
     raise NotImplementedError(f"Provider '{provider}' is not wired up yet (model_id={model_id})")
