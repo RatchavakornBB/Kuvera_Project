@@ -4,7 +4,7 @@ verified real at the user's explicit request; docs/demo-script.md updated to ref
 from Design-only to Live, added an optional bonus demo step).
 Active task: none
 Status: idle
-Last checkpoint commit: 9e5475e (will update after this close-out commit)
+Last checkpoint commit: d81a14e
 Blocked on: nothing
 
 ## Next up
