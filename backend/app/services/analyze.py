@@ -8,7 +8,7 @@ from typing import Any
 from agents.analyses import get_last_analysis, save_analysis
 from agents.graph import compiled_analyst_graph
 
-from app.db import get_client
+from app.services.documents import update_document_summary
 
 
 def get_latest_analysis(deal_id: str) -> dict[str, Any] | None:
@@ -44,7 +44,7 @@ def run_analysis(deal_id: str, document_id: str) -> dict[str, Any]:
         pricing_note=result.get("pricing_note"),
     )
 
-    get_client().table("documents").update({"summary": result["summary"]}).eq("id", document_id).execute()
+    update_document_summary(document_id, {"summary": result["summary"]})
 
     return {
         "summary": result["summary"],

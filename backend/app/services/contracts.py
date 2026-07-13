@@ -8,7 +8,6 @@ from typing import Any
 from agents.nodes.clause_extractor import clause_extractor
 from agents.nodes.contract_summarizer import contract_summarizer
 
-from app.db import get_client
 from app.services import documents as documents_service
 
 
@@ -21,8 +20,8 @@ def process_contract(deal_id: str, filename: str, content: bytes, content_type: 
     summary = contract_summarizer(document_id)
     clauses = clause_extractor(document_id)
 
-    get_client().table("documents").update(
-        {"summary": summary, "clauses": clauses, "type": "Contract"}
-    ).eq("id", document_id).execute()
+    documents_service.update_document_summary(
+        document_id, {"summary": summary, "clauses": clauses, "type": "Contract"}
+    )
 
     return {"document_id": document_id, "summary": summary, "clauses": clauses}

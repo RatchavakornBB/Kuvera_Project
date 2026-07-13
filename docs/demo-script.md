@@ -75,7 +75,7 @@ mentioning if asked "does this feed back into future analysis?"
 | Concierge Q&A + Orchestrator routing (web search, SEC EDGAR) | **Live** — real `web_search` tool, real SEC EDGAR API calls |
 | Key-date notifier | **Live** — a real in-process APScheduler (backend/app/scheduler.py) fires a real server-side check every 5 minutes, independent of any client polling; verified via a real `scheduled_run_log` entry, not just the endpoint working. The same scheduler also refreshes Industry Briefs every 24h |
 | Agent Hub | **Live** — a real Agent Grid (13 real agents across 7 Leads, grouped and filterable by status/provider — the design doc's "21 agents" framing doesn't match what's actually built, so this shows the real count honestly), a real Live Graph view of the Analyst Lead's actual LangGraph structure (polls every 3s, the running node highlights), plus the original static Activity Log, all backed by real `call_model()` invocation logging (agents/activity_tracker.py) across every agent, not just the 4 Analyst Lead nodes |
-| Documents & Contracts screen search | **Not live (semantic)** — substring search on name/summary. This is a different, older gap than the Knowledge Base's search below — this one was never upgraded |
+| Documents & Contracts screen search | **Live** — real pgvector cosine search reusing the same Voyage AI embeddings pipeline as the Knowledge Base (a document's name+summary is embedded on upload and re-embedded once a real summary lands), not the earlier substring match. Debounced client-side since it's a real paid embedding call per query |
 | Admin & Skill Governance (Agents & Models, Skills, Pending Approvals incl. eval pass-rate bar, Audit Log, Knowledge Base, Learning Agent) | **Live** — real DB-backed config wired into the actual `call_model()` call. Pending Approvals has a real on-demand eval pass-rate bar (real candidate output + real LLM-as-judge grading, "Run eval" button, green/red bar per ux-ui-spec.md's own threshold framing) for 3 agents with real eval cases defined (pricing_advisor, ic_memo_drafter, risk_flagger); other agents show "no eval cases defined" rather than a fabricated score |
 | Knowledge Agent (Section 10.1) — Deal Profile, Evaluation/Analysis/Strategy Approach, Outcome, Risk Signals, Prompt/Loop Engineering | **Live** — real pgvector semantic search (Voyage AI embeddings), a real "Close Deal" action promotes real deal data into it via a real Claude synthesis call, and `risk_flagger`/`pricing_advisor` retrieve real historical precedent from it automatically. Industry Insight and Competitor Insight are also **live** — real web-search-backed briefs (Claude's `web_search` tool, refreshed on-demand or every 24h by the scheduler), stored into the same knowledge base. Company Insight specifically is **not built** as a separate stored entity — there's no dedicated per-company monitoring pipeline |
 | Learning Agent (continuous outside-world ingestion, separate from Knowledge Agent) | **Live** — real web-search research cycles by category (M&A training data / prediction models / market news / law & regulation), can propose real skill.md changes into the same Pending Approvals queue a human uses |
@@ -107,10 +107,11 @@ mentioning if asked "does this feed back into future analysis?"
   web-search research and can propose real skill.md changes into the same approval queue a human
   uses — verified with a real Thailand PDPA regulatory research cycle that proposed a specific,
   grounded change to risk_flagger's skill."
-- **"Is the semantic search real (pgvector)?"** — "Depends which search — the Documents & Contracts
-  screen's search bar is still substring matching, that's a known unfixed gap. The Knowledge Base's
-  search is real pgvector with Voyage AI embeddings, verified end to end including cross-deal
-  ranking."
+- **"Is the semantic search real (pgvector)?"** — "Yes, both of them now — the Documents & Contracts
+  screen's search bar and the Knowledge Base's search are both real pgvector cosine search over
+  real Voyage AI embeddings, same underlying pipeline for both. I can search 'healthcare hospital
+  services contract' and it correctly surfaces the Master Services Agreement even though that exact
+  phrase isn't in the filename."
 - **"What happens if I upload a bad/huge file?"** — honest answer if asked live: "Upload isn't
   validated by file type/size yet — that's a real gap I'd fix before production, not before a demo."
 - **"Is this deployed anywhere?"** — "Running locally against a local Supabase instance for this

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDeals, fetchDocuments, type ApiDocumentWithDeal } from '../lib/api';
 import { DocumentTable } from '../components/documents/DocumentTable';
@@ -8,14 +8,24 @@ import { KeyDatesStrip } from '../components/documents/KeyDatesStrip';
 
 const DOC_TYPES = ['PDF', 'Financial', 'Document', 'Image', 'Contract'];
 const DOC_STATUSES = ['requested', 'received', 'pending', 'under_review', 'approved', 'rejected'];
+const SEARCH_DEBOUNCE_MS = 400;
 
 export function DocumentsContracts() {
+  const [qInput, setQInput] = useState('');
   const [q, setQ] = useState('');
   const [dealFilter, setDealFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selected, setSelected] = useState<ApiDocumentWithDeal | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+
+  // The search box now drives a real Voyage AI embedding call per query
+  // (pgvector semantic search), not a free local substring filter — debounce
+  // so typing doesn't fire one paid API call per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => setQ(qInput), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [qInput]);
 
   const { data: deals } = useQuery({ queryKey: ['deals'], queryFn: fetchDeals });
 
@@ -39,9 +49,9 @@ export function DocumentsContracts() {
 
       <div className="flex flex-wrap items-center gap-2">
         <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search name or summary…"
+          value={qInput}
+          onChange={(e) => setQInput(e.target.value)}
+          placeholder="Semantic search — try a concept, not just a filename…"
           className="min-w-[220px] flex-1 rounded border border-grid bg-panel px-3 py-2 text-[11.5px] text-white placeholder:text-gray"
         />
         <select

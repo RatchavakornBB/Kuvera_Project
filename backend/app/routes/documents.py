@@ -29,6 +29,11 @@ def list_documents(deal_id: str | None = None, type: str | None = None, status: 
     return documents_service.list_documents(deal_id=deal_id, doc_type=type, status=status, q=q)
 
 
+@library_router.post("/backfill-embeddings")
+def backfill_embeddings():
+    return {"embedded_count": documents_service.backfill_missing_embeddings()}
+
+
 @library_router.get("/{document_id}/download")
 def download_document(document_id: str):
     result = documents_service.download_document(document_id)
