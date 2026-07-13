@@ -30,8 +30,11 @@ export function AdminGovernance() {
           actual data into pgvector-embedded records that risk_flagger/pricing_advisor retrieve as
           historical precedent, and Industry/Competitor Briefs there use real web search. The
           Learning Agent tab runs real outside-world research and can propose real skill changes
-          into the same Pending Approvals queue. Eval pass-rate scoring isn't built (no eval
-          framework exists yet), so that part of the design spec isn't shown here.
+          into the same Pending Approvals queue, where a real (on-demand) eval pass-rate bar —
+          real candidate output + real LLM-as-judge grading against a small real test set — helps
+          triage a proposal before approving it. Eval cases exist for 3 agents so far
+          (pricing_advisor, ic_memo_drafter, risk_flagger); others show "no eval cases defined"
+          rather than a fabricated score.
         </div>
       </div>
 

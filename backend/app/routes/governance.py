@@ -45,6 +45,14 @@ def reject_change(change_id: str):
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+@router.post("/pending-approvals/{change_id}/run-eval")
+def run_eval_for_change(change_id: str):
+    try:
+        return governance_service.run_eval_for_change(change_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
 @router.get("/audit-log")
 def list_audit_log():
     return governance_service.list_audit_log()

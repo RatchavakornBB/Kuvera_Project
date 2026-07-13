@@ -190,6 +190,13 @@ export interface ApiAgentConfig {
   updated_at: string;
 }
 
+export interface ApiEvalResult {
+  criteria: string;
+  output: string;
+  passed: boolean;
+  reason: string;
+}
+
 export interface ApiPendingChange {
   id: string;
   agent_name: string;
@@ -199,6 +206,8 @@ export interface ApiPendingChange {
   status: 'pending' | 'approved' | 'rejected';
   proposed_at: string;
   reviewed_at: string | null;
+  eval_pass_rate: number | null;
+  eval_results: ApiEvalResult[] | null;
 }
 
 export interface ApiAuditEntry {
@@ -246,6 +255,12 @@ export async function resolvePendingChange(
 ): Promise<ApiPendingChange> {
   const res = await fetch(`${API_BASE_URL}/admin/pending-approvals/${changeId}/${action}`, { method: 'POST' });
   if (!res.ok) throw new Error(`POST /admin/pending-approvals/${changeId}/${action} failed: ${res.status}`);
+  return res.json();
+}
+
+export async function runEvalForChange(changeId: string): Promise<{ pass_rate: number | null; results: ApiEvalResult[]; note?: string }> {
+  const res = await fetch(`${API_BASE_URL}/admin/pending-approvals/${changeId}/run-eval`, { method: 'POST' });
+  if (!res.ok) throw new Error(`POST run-eval failed: ${res.status}`);
   return res.json();
 }
 

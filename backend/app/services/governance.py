@@ -6,6 +6,8 @@ every real LLM invocation — this is not a decorative admin UI."""
 from datetime import datetime, timezone
 from typing import Any
 
+from agents.evals import run_eval
+
 from app.db import get_client
 
 VALID_CHANGE_TYPES = ("model_id", "skill_content")
@@ -95,3 +97,29 @@ def reject_change(change_id: str) -> dict[str, Any]:
 def list_audit_log() -> list[dict[str, Any]]:
     client = get_client()
     return client.table("audit_log").select("*").order("created_at", desc=True).execute().data
+
+
+def run_eval_for_change(change_id: str) -> dict[str, Any]:
+    client = get_client()
+    rows = client.table("pending_changes").select("*").eq("id", change_id).execute().data
+    if not rows:
+        raise ValueError(f"No pending change with id {change_id}")
+    change = rows[0]
+
+    config_rows = client.table("agent_configs").select("*").eq("agent_name", change["agent_name"]).execute().data
+    current_config = config_rows[0] if config_rows else {"model_id": "claude-sonnet-5", "skill_content": ""}
+
+    if change["change_type"] == "skill_content":
+        skill_content = change["new_value"]
+        model_id = current_config["model_id"]
+    else:
+        skill_content = current_config["skill_content"] or ""
+        model_id = change["new_value"]
+
+    result = run_eval(change["agent_name"], skill_content, model_id)
+
+    client.table("pending_changes").update(
+        {"eval_pass_rate": result["pass_rate"], "eval_results": result["results"]}
+    ).eq("id", change_id).execute()
+
+    return result
