@@ -1,16 +1,16 @@
 ## Current
-Phase: 4 (Integration) — COMPLETE. Phase 5 (Polish & Rehearsal) not yet started.
-Active task: none — awaiting direction on Phase 5
-Status: idle
-Last checkpoint commit: a02fe47
+Phase: 5 (Polish & Rehearsal) — started 2026-07-13 per explicit user instruction ("ไป Phase 5 เลยละกัน").
+Active task: phase5-001-bug-fixing-pass
+Status: in_progress
+Last checkpoint commit: f09e5b8
 Blocked on: nothing
 
 ## Next up
-Phase 5 per 5day-build-timeline.md: bug-fixing pass, visual polish (empty/loading states),
-demo script, rehearsal, optional cloud deploy. Also open: phase5-admin-skill-governance
-(design-only candidate — needs a user decision on whether to build it at all). Nothing
-started yet; awaiting user direction since the explicit "Phase 4 + phase1-007" instruction
-is now fully done.
+phase5-001-bug-fixing-pass, phase5-002-visual-polish, phase5-003-demo-script,
+phase5-004-rehearsal, then a decision (ask user) on the optional cloud deploy block —
+5day-build-timeline.md explicitly says skip it if local + screen-share is sufficient.
+phase5-admin-skill-governance stays a separate open backlog question (design-only
+candidate), not pulled into this pass unless the user asks.
 
 ## Open questions for user
 - none currently open
@@ -23,4 +23,10 @@ is now fully done.
 - Backend routes: `/health`, `/deals` (CRUD), `/deals/{id}/documents`, `/deals/{id}/analyze`, `/contracts`, `/deals/{id}/ask`, `/chat` (WebSocket). `sys.path` self-bootstraps (D-009).
 - Agents: every node wraps its FULL body in `with_retry` (D-008/D-010). `agents/deal_context.py` structurally enforces deal_id scoping — never weaken this.
 - `/chat` is request/response, not streaming (D-012).
-- Frontend so far: no router — single App.tsx with Dashboard (Board/Kanban) + Chat panel. This phase adds react-router + a real app shell (top bar + sidebar) per ux-ui-spec.md Section 2.1, since multiple real screens are being built now.
+- Frontend routes (App.tsx): `/` (Dashboard), `/deals/:id` (Deal Detail, 4 tabs), `/documents`
+  (Documents & Contracts), `/agent-hub` (Agent Hub) — all real, all wired to real backend data as
+  of Phase 4. TopBar's NotificationBell and the Chat panel both live in AppShell (outside the
+  routed Outlet), so their state persists across navigation by design.
+- Seed data note for Phase 5 empty-state testing: Horizon Freight Corp and Nova Fintech have much
+  sparser data than Deal A (no documents/analyses) — good real cases for verifying empty states,
+  don't need to fabricate test fixtures for that.
