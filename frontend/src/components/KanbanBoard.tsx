@@ -8,7 +8,7 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ deals, onOpenDeal }: KanbanBoardProps) {
   return (
-    <div className="flex gap-2.5 overflow-x-auto pb-2">
+    <div className="flex w-full gap-2.5 overflow-x-auto pb-2">
       {STAGE_NAMES.map((stageName, stageIndex) => {
         const dealsInColumn = deals.filter(
           (d) => d.segments.findIndex((s) => s.status === 'current') === stageIndex,

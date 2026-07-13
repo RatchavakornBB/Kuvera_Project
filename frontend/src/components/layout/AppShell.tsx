@@ -24,7 +24,7 @@ export function AppShell() {
       <TopBar onToggleChat={() => setChatOpen((v) => !v)} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-w-0 flex-1 overflow-y-auto">
           <Outlet context={{ askAboutDeal } satisfies ShellContext} />
         </div>
         {chatOpen && (
