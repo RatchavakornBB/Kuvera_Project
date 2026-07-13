@@ -1,7 +1,6 @@
 # PROCESS/backlog.md — ready / blocked / deferred work
 
 ## Ready
-- [ ] phase4-002-documents-contracts-screen — the dedicated Documents & Contracts screen (search, filter, document detail side panel) — separate from the per-deal Documents tab.
 - [ ] phase4-003-agent-hub — static activity log table. Real data to read now exists: LangGraph's `checkpoints`/`checkpoint_writes` tables (Postgres Checkpointer, live since Phase 2) actually recorded every node run across all the Phase 2/3 testing.
 - [ ] phase4-004-key-date-notifier — 4.3 Key-date notifier (system-architecture.md Section 8), deferred out of phase3-001 since it's explicitly a "scheduled background check," different infrastructure than the ingest-triggered 4.1/4.2.
 - [ ] phase5-admin-skill-governance — Admin & Skill Governance screen (design-only candidate — check with user whether this stays design-only per the MVP scope table before building).
@@ -48,3 +47,10 @@ section, new GET /deals/{id}/analysis endpoint to hydrate without a fresh LLM ru
 phase4-001d-tasks-notes-tab (task list with quick-add/done-toggle backed by new
 POST/PATCH /deals/{id}/tasks, chronological meeting notes feed). Deal Detail's all
 4 tabs (Overview/Documents/Analysis/Tasks & Notes) are now complete.
+
+phase4-002-documents-contracts-screen — cross-deal Documents & Contracts screen: new
+GET /documents (deal_id/type/status/q filters, joined with owning deal), document
+table with 30-day key-date countdown badges, detail side panel with real extracted
+clauses, upload modal reusing the existing real upload path, key-dates banner.
+Deviation: substring search, not real pgvector semantic search (no embeddings
+pipeline exists in this MVP); no approval-status change history (no audit-log table).
