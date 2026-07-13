@@ -92,6 +92,22 @@ real pgvector semantic search via Voyage AI embeddings — a real "Close Deal"
 action promotes actual deal data via a real Claude synthesis call,
 risk_flagger/pricing_advisor retrieve real historical precedent automatically,
 Admin's Knowledge Base tab is real and searchable; Industry/Competitor/Company
-Insight deliberately not populated — need a periodic cross-deal Brief pipeline
-this MVP doesn't have). Eval pass-rate bar remains the one piece of the
-Admin spec not built — no eval framework exists anywhere in this codebase.
+Insight deliberately not populated at that point — need a periodic
+cross-deal Brief pipeline this MVP doesn't have).
+
+phase6-001-contradiction-engine — full Contradiction/Hypothesis
+confidence-scoring engine (no detailed spec exists for this anywhere in
+the docs, designed from a one-line description in 5day-build-timeline.md):
+real status ranks + real pgvector-matched corroboration counting (0.70
+threshold, calibrated against real embeddings) on top of the
+already-working lightweight flag, real versioned promotion into the
+Knowledge Agent on resolve. Found and fixed a real risk_flagger
+max_tokens ceiling (4096 -> 8192 -> 16384) via repeated real
+live-pipeline failures, not guessed at once.
+
+phase6-002-industry-competitor-briefs — extends the Knowledge Agent to
+Industry/Competitor Insight via real Claude web_search research (reuses
+knowledge_base, no new table). On-demand for now — flagged to retrofit
+into phase6-006's Key-date notifier scheduler once that's built.
+Eval pass-rate bar remains the one piece of the Admin spec not built —
+no eval framework exists anywhere in this codebase (see phase6-007).

@@ -1,25 +1,21 @@
 ## Current
-Phase: 6 (post-5-day-plan extension) — COMPLETE 2026-07-13. Since the 5-day plan finished, the
-user asked for three more real features, all built and verified: phase5-006 (Admin & Skill
-Governance, real-scoped), phase5-007 (fixed a real cross-deal document isolation bug found during
-a requested audit), phase5-008 (real image file support for document-reading nodes), phase5-009
-(full Knowledge Agent incl. real pgvector semantic search via Voyage AI). docs/demo-script.md is
-current as of the last commit below.
-Active task: none
-Status: idle
-Last checkpoint commit: 648a920
+Phase 6 (post-5-day-plan extension) is in progress: user asked to build out the remaining
+Design-only gaps in this explicit order — [1] Contradiction/Hypothesis engine (done),
+[2] Knowledge Agent Industry/Competitor Briefs (done), [3] Learning Agent, [4] Drafting Lead,
+[5] Agent Hub full view, [6] Key-date notifier true cron, [7] Eval pass-rate bar, [8] Documents &
+Contracts semantic search. Proceeding through the list without per-item re-confirmation per the
+user's instruction — only stopping to ask when something is a genuine blocker (e.g. needed a real
+API key for phase5-009's Voyage embeddings).
+Active task: phase6-003-learning-agent (next in the ordered list)
+Status: in_progress
+Last checkpoint commit: 6569f05
 Blocked on: nothing
 
 ## Next up
-Nothing scheduled. Open backlog items, not pulled in unless the user asks: phase5-admin-skill-
-governance's Knowledge Base tab is now done, but eval pass-rate scoring is still not built (no
-eval framework exists). Remaining Design-only gaps per docs/demo-script.md's Live vs. Design-only
-table: Drafting Lead, Learning Agent (continuous outside-world ingestion — distinct from the now-
-live Knowledge Agent), Industry/Competitor/Company Insight within the Knowledge Agent (need a
-periodic cross-deal Brief pipeline), RBAC, Documents & Contracts screen's substring-only search
-(the Knowledge Base's search is real pgvector; that one specific screen's search bar was never
-upgraded), full Agent Hub live-graph view, true scheduled cron for the key-date notifier. Otherwise
-awaiting user direction.
+phase6-003 (Learning Agent) through phase6-008 (Documents & Contracts semantic search), in the
+order above. Note logged in phase6-002's report: once phase6-006 (Key-date notifier's real
+scheduler) exists, retrofit it to also call refresh_industry_brief()/refresh_competitor_brief() on
+a real interval — right now those are on-demand only.
 
 ## Open questions for user
 - none currently open
@@ -28,10 +24,17 @@ awaiting user direction.
 - Local Supabase: ports 55321 (API)/55322 (DB)/55323 (Studio)/55324 (Inbucket)/55327 (Analytics) — NOT 54321 default (D-004). Wait for `(healthy)` after any `db reset` before hitting Storage.
 - `.env`: real ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_KEY, DATABASE_URL, VOYAGER_API_KEY (sic —
   not VOYAGE_API_KEY, matches what agents/config.py actually reads). Never print/log/commit.
-- Schema: 14 tables (8 core + `analyses` + `documents.clauses` + `agent_configs` +
-  `pending_changes` + `audit_log` + `knowledge_base`). New `public` tables need
+- Schema: 15 tables (8 core + `analyses` + `documents.clauses` + `agent_configs` +
+  `pending_changes` + `audit_log` + `knowledge_base` + `contradictions`). New `public` tables need
   `GRANT ... TO service_role` (D-005). Apply new migrations with `supabase migration up`, never
   `db reset`, once real accumulated test/demo data exists (a reset wipes it).
+- `agents/contradictions.py`: real pgvector-matched corroboration (threshold 0.70, calibrated
+  against real embeddings — 0.77 for a genuine paraphrase, 0.50 for an unrelated one). Wired into
+  risk_flagger via a new `is_contradiction` field on its tool schema. `risk_flagger`'s `max_tokens`
+  is now 16384 (raised twice from 4096 after real live runs kept hitting the ceiling — don't lower
+  it without re-verifying against a real run). `agents/industry_brief.py`: on-demand Industry/
+  Competitor Brief refresh via real web_search, stored in `knowledge_base` with `source_deal_id`
+  null.
 - `supabase/seed.sql`: demo user + 3 deals (Deal A, Horizon Freight Corp — has one test image
   document from phase5-008/phase5-007 testing, Nova Fintech — now `status: Closed` with 8 real
   promoted `knowledge_base` records from phase5-009 testing). Deal A has real uploaded
@@ -41,7 +44,8 @@ awaiting user direction.
   (cross-deal), `/contracts`, `/deals/{id}/ask`, `/chat` (WebSocket), `/agent-hub/activity`,
   `/notifications/key-dates`, `/admin/agents` + `/admin/agents/{name}/propose` +
   `/admin/pending-approvals` (+ `/approve` / `/reject`) + `/admin/audit-log`,
-  `/admin/knowledge-base` (+ `/search`). `sys.path` self-bootstraps (D-009).
+  `/admin/knowledge-base` (+ `/search`, `/refresh-industry-brief`, `/refresh-competitor-brief`),
+  `/deals/{id}/contradictions` (+ `/{id}/resolve`). `sys.path` self-bootstraps (D-009).
 - Agents: every node wraps its FULL body in `with_retry` (D-008/D-010). `agents/deal_context.py`
   structurally enforces deal_id scoping — never weaken this. `call_model()`
   (agents/adapters/model_adapter.py) now reads real DB-backed model_id/skill_content from
