@@ -109,5 +109,14 @@ phase6-002-industry-competitor-briefs — extends the Knowledge Agent to
 Industry/Competitor Insight via real Claude web_search research (reuses
 knowledge_base, no new table). On-demand for now — flagged to retrofit
 into phase6-006's Key-date notifier scheduler once that's built.
+
+phase6-003-learning-agent — real outside-world research (verified
+Claude's web_search server tool can be mixed with a custom
+structured-output tool in one call, untested before this) that can
+propose real skill.md additions into the exact same pending_changes
+approval queue a human uses via the Skills tab. Verified with a real
+Thailand PDPA regulatory research cycle that correctly proposed a
+specific, grounded addition to risk_flagger's skill.
+
 Eval pass-rate bar remains the one piece of the Admin spec not built —
 no eval framework exists anywhere in this codebase (see phase6-007).

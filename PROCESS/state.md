@@ -1,21 +1,22 @@
 ## Current
 Phase 6 (post-5-day-plan extension) is in progress: user asked to build out the remaining
 Design-only gaps in this explicit order — [1] Contradiction/Hypothesis engine (done),
-[2] Knowledge Agent Industry/Competitor Briefs (done), [3] Learning Agent, [4] Drafting Lead,
-[5] Agent Hub full view, [6] Key-date notifier true cron, [7] Eval pass-rate bar, [8] Documents &
-Contracts semantic search. Proceeding through the list without per-item re-confirmation per the
-user's instruction — only stopping to ask when something is a genuine blocker (e.g. needed a real
-API key for phase5-009's Voyage embeddings).
-Active task: phase6-003-learning-agent (next in the ordered list)
+[2] Knowledge Agent Industry/Competitor Briefs (done), [3] Learning Agent (done), [4] Drafting
+Lead, [5] Agent Hub full view, [6] Key-date notifier true cron, [7] Eval pass-rate bar,
+[8] Documents & Contracts semantic search. Proceeding through the list without per-item
+re-confirmation per the user's instruction — only stopping to ask when something is a genuine
+blocker (e.g. needed a real API key for phase5-009's Voyage embeddings).
+Active task: phase6-004-drafting-lead (next in the ordered list)
 Status: in_progress
-Last checkpoint commit: 6569f05
+Last checkpoint commit: 9daf9f2
 Blocked on: nothing
 
 ## Next up
-phase6-003 (Learning Agent) through phase6-008 (Documents & Contracts semantic search), in the
-order above. Note logged in phase6-002's report: once phase6-006 (Key-date notifier's real
-scheduler) exists, retrofit it to also call refresh_industry_brief()/refresh_competitor_brief() on
-a real interval — right now those are on-demand only.
+phase6-004 (Drafting Lead) through phase6-008 (Documents & Contracts semantic search), in the
+order above. Note logged in phase6-002/003's reports: once phase6-006 (Key-date notifier's real
+scheduler) exists, retrofit it to also call refresh_industry_brief()/refresh_competitor_brief()
+(agents/industry_brief.py) and run_learning_cycle() (agents/learning_agent.py) on a real interval —
+right now all three are on-demand only.
 
 ## Open questions for user
 - none currently open
@@ -24,8 +25,9 @@ a real interval — right now those are on-demand only.
 - Local Supabase: ports 55321 (API)/55322 (DB)/55323 (Studio)/55324 (Inbucket)/55327 (Analytics) — NOT 54321 default (D-004). Wait for `(healthy)` after any `db reset` before hitting Storage.
 - `.env`: real ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_KEY, DATABASE_URL, VOYAGER_API_KEY (sic —
   not VOYAGE_API_KEY, matches what agents/config.py actually reads). Never print/log/commit.
-- Schema: 15 tables (8 core + `analyses` + `documents.clauses` + `agent_configs` +
-  `pending_changes` + `audit_log` + `knowledge_base` + `contradictions`). New `public` tables need
+- Schema: 16 tables (8 core + `analyses` + `documents.clauses` + `agent_configs` +
+  `pending_changes` + `audit_log` + `knowledge_base` + `contradictions` + `learning_digests`).
+  New `public` tables need
   `GRANT ... TO service_role` (D-005). Apply new migrations with `supabase migration up`, never
   `db reset`, once real accumulated test/demo data exists (a reset wipes it).
 - `agents/contradictions.py`: real pgvector-matched corroboration (threshold 0.70, calibrated
@@ -45,7 +47,11 @@ a real interval — right now those are on-demand only.
   `/notifications/key-dates`, `/admin/agents` + `/admin/agents/{name}/propose` +
   `/admin/pending-approvals` (+ `/approve` / `/reject`) + `/admin/audit-log`,
   `/admin/knowledge-base` (+ `/search`, `/refresh-industry-brief`, `/refresh-competitor-brief`),
-  `/deals/{id}/contradictions` (+ `/{id}/resolve`). `sys.path` self-bootstraps (D-009).
+  `/deals/{id}/contradictions` (+ `/{id}/resolve`), `/admin/learning` (`/run`, `/digests`).
+  `sys.path` self-bootstraps (D-009). Verified: mixing Claude's `web_search` server tool with a
+  custom structured-output tool in one call works (agents/learning_agent.py) — untested before
+  phase6-003, don't assume it doesn't work if reconsidering agents/industry_brief.py's
+  freeform-text-only design.
 - Agents: every node wraps its FULL body in `with_retry` (D-008/D-010). `agents/deal_context.py`
   structurally enforces deal_id scoping — never weaken this. `call_model()`
   (agents/adapters/model_adapter.py) now reads real DB-backed model_id/skill_content from
