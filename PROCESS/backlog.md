@@ -4,7 +4,13 @@
 - (none currently open)
 
 ## Blocked
-- (none)
+- phase7-004's remaining verification item (full live chat round-trip: send
+  a message, get a real analyst_lead response, click Open, confirm landing
+  on the Analysis tab) — blocked on the Anthropic API account being out of
+  credits (hit live 2026-07-14: "Your credit balance is too low to access
+  the Anthropic API"). This blocks ALL real Claude-backed functionality in
+  the app right now, not just this one check — needs the user to top up the
+  account. See PROCESS/state.md's "Blocked on" for full detail.
 
 ## Explicitly skipped (a decision, not an oversight)
 - Cloud deploy (5day-build-timeline.md's optional 15:30-17:00 Phase 5 block) — user confirmed
@@ -235,3 +241,15 @@ timeout=120.0 (agents/adapters/model_adapter.py), frontend 150s
 client-side timeout (useChatSocket.ts) that surfaces a real message
 instead of hanging indefinitely. Re-verified against the user's own
 real uploaded document after restarting the backend — clean success.
+
+phase7-004-chat-artifact-open-fix — user reported the Chat assistant's
+analysis response looked cut off and asked if there was a token
+limit. Confirmed via the real stored summary (2575 chars, complete
+sentence, well under the model's real 1536-token ceiling) that this
+was NOT a token limit — a hardcoded 300-char preview slice in
+backend/app/routes/chat.py. Investigating surfaced a worse bug: the
+artifact card's "Open" button was never wired to anything in
+ChatPage.tsx (phase7-001). Fixed both: preview trims to a word
+boundary, artifact carries deal_id, Open navigates to
+/deals/{id}?tab=analysis (new real deep-linking capability added to
+DealDetail.tsx). Verification incomplete — see Blocked above.

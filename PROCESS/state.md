@@ -1,16 +1,33 @@
 ## Current
 Phase 6 (post-5-day-plan extension) is fully complete (see prior entries below). Phase 7 is
 underway: phase7-001 rebuilt Chat as a real dedicated page, phase7-002 added real .docx document
-support, phase7-003 fixed a real live hang the user hit (Chat stuck "thinking…" for 5+ min — no
-request timeout was configured on the Anthropic client). Nothing currently in progress.
-Active task: none
-Status: idle
-Last checkpoint commit: cbbde5b
-Blocked on: nothing
+support, phase7-003 fixed a real live hang, phase7-004 fixed the chat artifact "Open" button (never
+wired to anything) + a hardcoded 300-char preview cutoff the user mistook for a token limit — but
+its live-verification is INCOMPLETE, see Blocked on below.
+Active task: none actively being worked, but phase7-004 has an open verification item
+Status: blocked (external)
+Last checkpoint commit: c89b1e2
+Blocked on: **Anthropic API account is out of credits** — hit live during phase7-004 testing
+("Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to
+upgrade or purchase credits."). This blocks EVERY real Claude-backed feature in the app right now
+(analyze, chat, drafting, learning, evals — everything that calls call_model()), not just the
+current task. Needs the user to top up the Anthropic account before any further live verification
+or real usage is possible. Re-run phase7-004's remaining live chat-round-trip check once resolved.
 
 ## Next up
-Nothing queued. If the user wants further work, check PROCESS/backlog.md's Done section for full
-history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+Once API credits are restored: finish phase7-004's one open verification item (full live chat
+round-trip: send a message, get the analyst_lead response, click Open, confirm landing on the
+Analysis tab — the URL-navigation half was already verified without needing a live API call).
+Nothing else queued. If the user wants further work, check PROCESS/backlog.md's Done section for
+full history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+phase7-004 fixed: the Chat assistant's analyst_lead response preview was hard-cut at 300 chars
+(backend/app/routes/chat.py) — confirmed via the real stored summary (2575 chars, complete
+sentence, well under doc_summarizer's real 1536-token ceiling) that this was NOT an LLM token
+limit, just a UI preview slice, now trimmed to a word boundary. Investigating that surfaced a
+worse bug: the artifact card's "Open" button (meant to show the full analysis) was never wired to
+anything in ChatPage.tsx (built in phase7-001) — fixed by adding deal_id to the artifact response
+and wiring onOpen to navigate to /deals/{id}?tab=analysis, which required adding real ?tab=
+deep-linking to DealDetail.tsx (didn't exist before — tab state was always local-only).
 phase7-003 fixed a real live hang: agents/adapters/model_adapter.py's Anthropic client had no
 explicit timeout (SDK default ~10min), so a stalled network call could block a thread-pool worker
 indefinitely with zero visible error. Confirmed the hang was real (not assumed) by checking the
