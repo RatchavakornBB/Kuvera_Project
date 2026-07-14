@@ -83,11 +83,34 @@ def create_document_from_url(deal_id: str, url: str) -> dict[str, Any]:
     source_url set for provenance. The extracted text is stored as a real
     .txt document, which agents/documents.py::build_content_block() already
     knows how to feed to Claude — link sources are just as analyzable as an
-    uploaded file, not a lesser citation-only stub."""
+    uploaded file, not a lesser citation-only stub.
+
+    Also runs a real doc_summarizer call immediately (just that one node,
+    not the full Analyst Lead pipeline — risk-flagging/IC-memo/pricing
+    don't make sense for a general reference URL) so the source is
+    genuinely readable by Concierge Q&A right away, matching NotebookLM's
+    real behavior. agents/deal_context.py::build_deal_context() only ever
+    surfaces a document's `summary` field to Concierge, never raw bytes —
+    without this, a freshly-added link would sit invisible to Concierge
+    until someone separately ran Analyze on it. Best-effort: a
+    summarization failure here does not fail the whole add-link action,
+    since the document itself was already created successfully — it just
+    leaves `summary` null, same as any document nobody has analyzed yet."""
     title, text = fetch_url_as_text(url)
     safe_title = re.sub(r"[^\w\s.-]", "", title).strip()[:80] or "web-source"
     filename = f"{safe_title}.txt"
-    return upload_document(deal_id, filename, text.encode("utf-8"), "text/plain", source_url=url)
+    doc = upload_document(deal_id, filename, text.encode("utf-8"), "text/plain", source_url=url)
+
+    try:
+        from agents.nodes.doc_summarizer import doc_summarizer
+
+        result = doc_summarizer({"document_id": doc["id"]})
+        update_document_summary(doc["id"], {"summary": result["summary"]})
+        doc["summary"] = result["summary"]
+    except Exception:
+        pass
+
+    return doc
 
 
 def update_document_summary(document_id: str, fields: dict[str, Any]) -> None:

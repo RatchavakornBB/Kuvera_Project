@@ -1,8 +1,8 @@
-## Result: 🔶 Code fix complete and verified where possible — full live round-trip blocked by exhausted Anthropic API credits (external, not a code defect)
+## Result: ✅ DoD fully met — code fix + full live round-trip verified after API credits were restored
 
 Gate: root cause confirmed with real data (not assumed) ✅ · a second related bug found and fixed
-while investigating the first ✅ · new deep-link verified independently of the blocked API ✅ ·
-live chat round-trip blocked by a real account-level constraint 🔶.
+while investigating the first ✅ · new deep-link verified independently of the (at the time)
+blocked API ✅ · full live chat round-trip re-verified once credits were restored ✅.
 
 User reported the Chat assistant's analysis response looked cut off ("...co...") and asked whether
 there's a token limit on the returned output. Investigated with real data rather than assuming:
@@ -32,18 +32,20 @@ even a degraded one.
   This is a genuinely new, real capability (not previously supported anywhere), not a cosmetic
   tweak.
 
-**Verification was cut short by a real external blocker, disclosed rather than worked around**: the
-live Playwright test that sends an actual chat message and waits for a real `analyst_lead` response
-failed with a real Anthropic API error — *"Your credit balance is too low to access the Anthropic
-API. Please go to Plans & Billing to upgrade or purchase credits."* This blocks every real
-Claude-backed feature in the app right now, not just this fix — flagged to the user immediately and
-clearly rather than silently retrying or fabricating a passing result. Everything verifiable
-without a live Claude call was verified: `tsc --noEmit` clean, backend imports cleanly, and — most
-importantly — the new `?tab=analysis` deep-link itself was independently confirmed via a real
-browser navigation (no API call involved) landing correctly on the Analysis tab with real
-contradiction/risk-flag content visible, proving the navigation half of the fix works. The
-remaining check (the actual chat-button click path end to end) needs API credits restored to
-finish.
+**Verification was initially cut short by a real external blocker, disclosed rather than worked
+around**: the live Playwright test that sends an actual chat message and waits for a real
+`analyst_lead` response failed with a real Anthropic API error — *"Your credit balance is too low
+to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."* This
+blocked every real Claude-backed feature in the app at the time, not just this fix — flagged to
+the user immediately and clearly rather than silently retrying or fabricating a passing result.
+Everything verifiable without a live Claude call was verified in the meantime: `tsc --noEmit`
+clean, backend imports cleanly, and the new `?tab=analysis` deep-link itself was independently
+confirmed via a real browser navigation (no API call involved) landing correctly on the Analysis
+tab with real contradiction/risk-flag content visible.
 
-Open item: re-run the full live chat round-trip (send message → get analyst_lead response → click
-Open → confirm landing on Analysis tab) once Anthropic API credits are available again.
+**Once the user topped up the account, re-ran the full live round-trip and it passed cleanly**:
+sent a real chat message ("Analyze the latest uploaded document"), got back a real `analyst_lead`
+response with the fixed preview — *"...but explicitly excludes… (open the artifact below for the
+full summary, risk flags, IC memo, and pricing note)"* — clicked the real Open button, and
+confirmed the browser actually navigated to `/deals/{id}?tab=analysis`, landing on the real
+Analysis tab. Zero console errors throughout.
