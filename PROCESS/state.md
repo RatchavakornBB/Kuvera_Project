@@ -1,16 +1,27 @@
 ## Current
 Phase 6 (post-5-day-plan extension) is fully complete (see prior entries below). Phase 7 is
-underway: phase7-001 rebuilt Chat as a real dedicated page (see below), phase7-002 added real
-.docx document support to the Analyst Lead pipeline (user asked "ทำให้ไฟล์รองรับ Docx ได้มั้ย").
-Nothing currently in progress.
+underway: phase7-001 rebuilt Chat as a real dedicated page, phase7-002 added real .docx document
+support, phase7-003 fixed a real live hang the user hit (Chat stuck "thinking…" for 5+ min — no
+request timeout was configured on the Anthropic client). Nothing currently in progress.
 Active task: none
 Status: idle
-Last checkpoint commit: ca32727
+Last checkpoint commit: cbbde5b
 Blocked on: nothing
 
 ## Next up
 Nothing queued. If the user wants further work, check PROCESS/backlog.md's Done section for full
 history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+phase7-003 fixed a real live hang: agents/adapters/model_adapter.py's Anthropic client had no
+explicit timeout (SDK default ~10min), so a stalled network call could block a thread-pool worker
+indefinitely with zero visible error. Confirmed the hang was real (not assumed) by checking the
+LangGraph checkpoint table for the exact thread_id and finding zero rows, then re-running the
+identical call directly — it completed in ~19.5s, ruling out a systemic pipeline break. Fixed on
+both ends: backend now sets timeout=120.0 (agents/adapters/model_adapter.py::REQUEST_TIMEOUT_SECONDS,
+a stall now raises a real exception with_retry converts to NodeFailure); frontend
+(useChatSocket.ts) now has a 150s client-side timer that resets `busy` and shows a real message if
+no response arrives, instead of hanging "thinking…" forever. Re-verified against the user's own
+real uploaded document (not test data) after restarting the backend — clean 200, real correct
+response.
 phase7-002 added real .docx support to agents/documents.py::build_content_block() — Claude has no
 native Word-document content block, so real text is extracted via python-docx (already a
 dependency from phase6-004's Drafting Lead, used the opposite direction there) and sent as a text
@@ -106,6 +117,9 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   structurally enforces deal_id scoping — never weaken this. `call_model()`
   (agents/adapters/model_adapter.py) now reads real DB-backed model_id/skill_content from
   `agent_configs` on every call — the Admin & Skill Governance chokepoint, never bypass it.
+  `_anthropic_client()` sets an explicit 120s `timeout` (phase7-003, `REQUEST_TIMEOUT_SECONDS`) —
+  a real live hang was hit without it (SDK default ~10min, silent, no error). Don't remove this.
+  `frontend/src/lib/useChatSocket.ts` has a matching 150s client-side timeout for the same reason.
   `agents/documents.py::build_content_block()` is the one place a document's bytes become a
   Claude content block (PDF -> `document`, image -> `image`, docx -> `text` via real python-docx
   extraction since phase7-002 — audio/video still genuinely unsupported, no real transcription

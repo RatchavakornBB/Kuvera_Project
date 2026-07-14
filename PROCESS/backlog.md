@@ -223,3 +223,15 @@ analysis. Hit and recovered from the known "backend needs a restart to
 pick up code changes" gotcha mid-verification. Audio/video remain
 genuinely unsupported — no real transcription pipeline exists to
 bridge them honestly.
+
+phase7-003-request-timeout-fix — user hit a real live hang: the Chat
+assistant stuck "thinking…" for 5+ minutes with no error. Confirmed
+via the LangGraph checkpoint table (zero rows for that thread_id —
+proof the run never progressed) rather than assuming, then re-ran the
+identical call directly and it completed in ~19.5s, ruling out a
+systemic break. Root cause: no explicit timeout on the Anthropic
+client (SDK default ~10min, silent). Fixed both ends: backend
+timeout=120.0 (agents/adapters/model_adapter.py), frontend 150s
+client-side timeout (useChatSocket.ts) that surfaces a real message
+instead of hanging indefinitely. Re-verified against the user's own
+real uploaded document after restarting the backend — clean success.
