@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { fetchDeals, createDeal } from '../lib/api';
+import { fetchDeals, fetchDocuments, documentDownloadUrl, createDeal } from '../lib/api';
 import { statusColor } from '../lib/dealStatus';
 import { ChatMessage } from '../components/chat/ChatMessage';
 import { ChatArtifactCard } from '../components/chat/ChatArtifactCard';
@@ -31,6 +31,12 @@ export function ChatPage() {
   const { data: deals } = useQuery({ queryKey: ['deals'], queryFn: fetchDeals });
   const activeMode = useMemo(() => MODES.find((m) => m.key === mode)!, [mode]);
 
+  const { data: selectedDealDocuments, isLoading: documentsLoading } = useQuery({
+    queryKey: ['documents', { deal_id: selectedDeal?.id }],
+    queryFn: () => fetchDocuments({ deal_id: selectedDeal!.id }),
+    enabled: !!selectedDeal,
+  });
+
   const createMutation = useMutation({
     mutationFn: createDeal,
     onSuccess: () => {
@@ -47,28 +53,56 @@ export function ChatPage() {
           <div className="text-[10px] text-gray">{deals?.length ?? 0}</div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {deals?.map((d) => (
-            <div
-              key={d.id}
-              onClick={() => setSelectedDeal(selectedDeal?.id === d.id ? undefined : { id: d.id, name: d.name })}
-              className="flex cursor-pointer items-start gap-2 border-b border-grid px-3.5 py-2.5"
-              style={{ background: selectedDeal?.id === d.id ? 'var(--color-terminal-black)' : undefined }}
-            >
-              <div
-                className="mt-0.5 h-3 w-3 shrink-0 rounded-sm"
-                style={{
-                  background: selectedDeal?.id === d.id ? statusColor(d.status) : 'transparent',
-                  border: `1.5px solid ${statusColor(d.status)}`,
-                }}
-              />
-              <div className="min-w-0">
-                <div className="truncate text-[11.5px] font-semibold text-white">{d.name}</div>
-                <div className="mt-0.5 text-[10px] text-gray">
-                  {d.status} · {d.owner?.full_name ?? 'Unassigned'}
+          {deals?.map((d) => {
+            const isSelected = selectedDeal?.id === d.id;
+            return (
+              <div key={d.id} className="border-b border-grid" style={{ background: isSelected ? 'var(--color-terminal-black)' : undefined }}>
+                <div
+                  onClick={() => setSelectedDeal(isSelected ? undefined : { id: d.id, name: d.name })}
+                  className="flex cursor-pointer items-start gap-2 px-3.5 py-2.5"
+                >
+                  <div
+                    className="mt-0.5 h-3 w-3 shrink-0 rounded-sm"
+                    style={{
+                      background: isSelected ? statusColor(d.status) : 'transparent',
+                      border: `1.5px solid ${statusColor(d.status)}`,
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <div className="truncate text-[11.5px] font-semibold text-white">{d.name}</div>
+                    <div className="mt-0.5 text-[10px] text-gray">
+                      {d.status} · {d.owner?.full_name ?? 'Unassigned'}
+                    </div>
+                  </div>
                 </div>
+
+                {isSelected && (
+                  <div className="pb-2 pl-8 pr-3">
+                    {documentsLoading && <div className="py-1 text-[10px] text-gray">Loading documents…</div>}
+                    {!documentsLoading && (selectedDealDocuments?.length ?? 0) === 0 && (
+                      <div className="py-1 text-[10px] text-gray">No documents uploaded for this deal yet.</div>
+                    )}
+                    {selectedDealDocuments?.map((doc) => (
+                      <div key={doc.id} className="flex items-center gap-1.5 py-1">
+                        <div className="h-2 w-2 shrink-0 rounded-sm bg-gray" />
+                        <div className="min-w-0 flex-1 truncate text-[10.5px] text-[#e7e7ea]">{doc.name}</div>
+                        {doc.storage_path && (
+                          <a
+                            href={documentDownloadUrl(doc.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="shrink-0 text-[10px] text-blue no-underline"
+                            title={`Download ${doc.name}`}
+                          >
+                            ↓
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <button
           onClick={() => setNewDealOpen(true)}
