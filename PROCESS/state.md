@@ -2,28 +2,31 @@
 Phase 6 (post-5-day-plan extension) is fully complete (see prior entries below). Phase 7 is
 underway: phase7-001 rebuilt Chat as a real dedicated page, phase7-002 added real .docx document
 support, phase7-003 fixed a real live hang, phase7-004 fixed the chat artifact "Open" button +
-preview truncation (live-verification still INCOMPLETE, blocked — see below), phase7-005 added a
-real per-deal document list to the Chat Sources panel, phase7-006 added real NotebookLM-style
-"add a link" URL sources (real fetch + extraction + SSRF protection, no API dependency, fully
-verified).
-Active task: none actively being worked, but phase7-004 has an open verification item
-Status: blocked (external, on phase7-004's remaining item only — everything else is unblocked)
-Last checkpoint commit: b06fd3e
-Blocked on: **Anthropic API account is out of credits** — hit live during phase7-004 testing
-("Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to
-upgrade or purchase credits."). This blocks EVERY real Claude-backed feature in the app right now
-(analyze, chat, drafting, learning, evals — everything that calls call_model()), not just the
-current task. Needs the user to top up the Anthropic account before any further live verification
-or real usage of AI features is possible. Non-AI features (e.g. phase7-005/006's document
-listing/link-adding) remain fully buildable/verifiable in the meantime. Re-run phase7-004's
-remaining live chat-round-trip check once resolved.
+preview truncation (now FULLY verified, see below), phase7-005 added a real per-deal document list
+to the Chat Sources panel, phase7-006 added real NotebookLM-style "add a link" URL sources,
+phase7-007 made link sources actually readable by Concierge Q&A (auto-summarize on add). User
+topped up Anthropic API credits mid-session (2026-07-14) — everything is now unblocked and fully
+live-verified.
+Active task: none
+Status: idle
+Last checkpoint commit: fbca3aa
+Blocked on: nothing — Anthropic API credits were restored by the user and both phase7-004's and
+phase7-007's live verifications were re-run successfully against the real API.
 
 ## Next up
-Once API credits are restored: finish phase7-004's one open verification item (full live chat
-round-trip: send a message, get the analyst_lead response, click Open, confirm landing on the
-Analysis tab — the URL-navigation half was already verified without needing a live API call).
-Nothing else queued. If the user wants further work, check PROCESS/backlog.md's Done section for
-full history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+Nothing queued. If the user wants further work, check PROCESS/backlog.md's Done section for full
+history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+phase7-007 fixed a real gap found while answering the user's "will the Agent be able to read a
+link source" question: agents/deal_context.py::build_deal_context() (what Concierge Q&A actually
+reads) only ever surfaces a document's `summary` field, never raw bytes — a freshly-added link had
+`summary: null` until someone separately ran Analyze, so it was invisible to Concierge despite
+being fully stored. Fixed by running a real doc_summarizer call immediately in
+create_document_from_url() (just that one node, not the full pipeline). Verified live: real
+~35.8s add-link call produced a real grounded summary, confirmed via build_deal_context() directly
+that Concierge's context now includes it, and a real Concierge Q&A round-trip correctly referenced
+the document while honestly declining to state details beyond its 200-char preview (a
+pre-existing, deal-context-wide cap applying to every document type, not link-specific) rather
+than fabricating an answer.
 phase7-006 added real "add a link" URL sources: agents/web_source.py fetches a real page
 server-side (httpx) and extracts real readable text (BeautifulSoup, strips script/style) — the
 page's own real content, not a fabricated summary. Real SSRF protection

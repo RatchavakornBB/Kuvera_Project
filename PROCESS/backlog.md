@@ -4,13 +4,10 @@
 - (none currently open)
 
 ## Blocked
-- phase7-004's remaining verification item (full live chat round-trip: send
-  a message, get a real analyst_lead response, click Open, confirm landing
-  on the Analysis tab) — blocked on the Anthropic API account being out of
-  credits (hit live 2026-07-14: "Your credit balance is too low to access
-  the Anthropic API"). This blocks ALL real Claude-backed functionality in
-  the app right now, not just this one check — needs the user to top up the
-  account. See PROCESS/state.md's "Blocked on" for full detail.
+- (none — the Anthropic API credit outage hit live 2026-07-14 that
+  blocked phase7-004's remaining verification item was resolved the same
+  day when the user topped up the account; the check was re-run and
+  passed, see phase7-004 in Done below)
 
 ## Explicitly skipped (a decision, not an oversight)
 - Cloud deploy (5day-build-timeline.md's optional 15:30-17:00 Phase 5 block) — user confirmed
@@ -252,7 +249,9 @@ artifact card's "Open" button was never wired to anything in
 ChatPage.tsx (phase7-001). Fixed both: preview trims to a word
 boundary, artifact carries deal_id, Open navigates to
 /deals/{id}?tab=analysis (new real deep-linking capability added to
-DealDetail.tsx). Verification incomplete — see Blocked above.
+DealDetail.tsx). Initial verification was blocked by a real Anthropic
+API credit outage; re-ran the full live round-trip once the user
+topped up the account — passed cleanly, DoD fully met.
 
 phase7-005-sources-document-list — user asked for the Chat page's
 Sources panel to show a deal's related documents when clicked into.
@@ -275,3 +274,18 @@ pipeline, verified directly bypassing the credit-exhausted Claude
 API. Reuses upload_document()'s exact real write path. Full real
 browser flow verified: paste URL -> real new document with real page
 title, working source link and download link, zero console errors.
+
+phase7-007-auto-summarize-link-source — user asked whether the Agent
+can actually read a link source. Traced the real path:
+build_deal_context() (what Concierge Q&A reads) only ever surfaces a
+document's summary field, and phase7-006 never auto-triggered
+summarization, so a freshly-added link sat invisible until someone
+separately ran Analyze. Fixed by running a real doc_summarizer call
+immediately in create_document_from_url() (just that node, not the
+full pipeline). Verified live with real (user-restored) API credits:
+a real ~35.8s add-link call produced a real grounded summary,
+confirmed via build_deal_context() directly that Concierge's context
+now includes it, and a real Concierge Q&A round-trip correctly
+referenced the document while honestly declining to state details
+beyond its 200-char preview (a pre-existing, deal-context-wide cap
+applying to every document type) rather than fabricating an answer.
