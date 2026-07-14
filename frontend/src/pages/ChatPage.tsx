@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { fetchDeals, createDeal } from '../lib/api';
 import { statusColor } from '../lib/dealStatus';
 import { ChatMessage } from '../components/chat/ChatMessage';
@@ -22,6 +22,7 @@ const MODES = [
 ] as const;
 
 export function ChatPage() {
+  const navigate = useNavigate();
   const { chat, selectedDeal, setSelectedDeal } = useOutletContext<ShellContext>();
   const [mode, setMode] = useState<(typeof MODES)[number]['key']>('concierge');
   const [newDealOpen, setNewDealOpen] = useState(false);
@@ -103,7 +104,12 @@ export function ChatPage() {
           {chat.messages.map((m) => (
             <div key={m.id} className="flex flex-col">
               <ChatMessage message={m} />
-              {m.artifact && <ChatArtifactCard artifact={m.artifact} />}
+              {m.artifact && (
+                <ChatArtifactCard
+                  artifact={m.artifact}
+                  onOpen={m.artifact.deal_id ? () => navigate(`/deals/${m.artifact!.deal_id}?tab=analysis`) : undefined}
+                />
+              )}
             </div>
           ))}
           {chat.busy && <AgentActivityPill label="Kuvera Assistant · thinking…" />}

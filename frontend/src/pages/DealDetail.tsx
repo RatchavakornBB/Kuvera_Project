@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { DealDetailHeader } from '../components/dealDetail/DealDetailHeader';
 import { DealDetailTabs, type DealTab } from '../components/dealDetail/DealDetailTabs';
 import { OverviewTab } from '../components/dealDetail/OverviewTab';
@@ -17,7 +17,12 @@ export function DealDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { askAboutDeal } = useOutletContext<ShellContext>();
-  const [tab, setTab] = useState<DealTab>('overview');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab');
+  const validTabs: DealTab[] = ['overview', 'documents', 'analysis', 'tasks'];
+  const [tab, setTab] = useState<DealTab>(
+    validTabs.includes(initialTab as DealTab) ? (initialTab as DealTab) : 'overview',
+  );
 
   const { data: deal, isLoading, isError } = useQuery({
     queryKey: ['deal', id],

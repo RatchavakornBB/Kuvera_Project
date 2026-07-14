@@ -40,10 +40,11 @@ async def _handle_message(deal_id: str | None, message: str) -> dict:
         if doc is None:
             return {"role": "assistant", "text": "There's no document uploaded for this deal yet to analyze."}
         result = await run_in_threadpool(analyze_service.run_analysis, deal_id, doc["id"])
+        preview = result["summary"][:300].rsplit(" ", 1)[0]
         return {
             "role": "assistant",
-            "text": f"Analysis complete on {doc['name']}. {result['summary'][:300]}...",
-            "artifact": {"title": f"{doc['name']} — IC memo draft", "type": "Doc"},
+            "text": f"Analysis complete on {doc['name']}. {preview}… (open the artifact below for the full summary, risk flags, IC memo, and pricing note)",
+            "artifact": {"title": f"{doc['name']} — IC memo draft", "type": "Doc", "deal_id": deal_id},
         }
 
     result = await run_in_threadpool(concierge_service.ask_about_deal, deal_id, message)

@@ -1,6 +1,7 @@
 export interface ChatArtifact {
   title: string;
   type: string;
+  deal_id?: string;
 }
 
 export function ChatArtifactCard({ artifact, onOpen }: { artifact: ChatArtifact; onOpen?: () => void }) {
