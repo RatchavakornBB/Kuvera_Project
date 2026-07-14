@@ -2,17 +2,36 @@
 Phase 6 (post-5-day-plan extension) is fully complete (see prior entries below). Phase 7 is
 underway: phase7-001 through phase7-007 rebuilt/fixed Chat (dedicated page, .docx support, request
 timeout, artifact Open button, Sources document list, add-link sources, link auto-summarize — all
-complete, see below). phase7-008 added real episodic chat memory: persistent conversations, RAG
-recall into Concierge, auto-digest into Knowledge Base, and multi-tab chat per deal. Everything is
-live-verified against the real Anthropic API (credits restored 2026-07-14).
+complete, see below). phase7-008 added real episodic chat memory (persistent conversations, RAG
+recall, auto-digest, multi-tab). phase7-009 added tab deletion with forced digest-before-delete,
+and found+fixed a real bug (a Voyage rate limit was discarding whole synthesized digests, not just
+failing to embed them). Everything live-verified against the real Anthropic API.
 Active task: none
 Status: idle
-Last checkpoint commit: f83e289
+Last checkpoint commit: c86a8c7
 Blocked on: nothing.
+Note: backend/app/routes/chat.py, agents/web_source.py, backend/app/services/contracts.py,
+agents/documents.py, and related files have real parallel additions beyond what these PROCESS
+entries document (contracts_lead/drafting_lead/update_stage/web_research-to-document chat routing,
+direct file-URL fetching) — not authored in this session's tracked phase7 work, encountered
+mid-task via IDE change notifications. Left untouched and not re-documented here since they're
+outside what was asked; re-read the actual files before assuming their behavior from memory.
 
 ## Next up
 Nothing queued. If the user wants further work, check PROCESS/backlog.md's Done section for full
 history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+phase7-009 added conversation deletion with a forced digest first (force_digest_conversation()
+bypasses the normal 10-message threshold — agents/chat_memory.py). Found and fixed a real bug
+during its own verification: _run_digest() was discarding an already-synthesized real digest
+entirely when the trailing embedding call hit a real Voyage 429 (a rate limit legitimately earned
+from this session's heavy real API testing) — fixed by making the embedding step its own
+try/except (embedding=None on failure), matching documents.py's established null-embedding-then-
+backfill pattern. Added the missing knowledge_base counterpart:
+agents/knowledge.py::backfill_missing_embeddings() + POST /admin/knowledge-base/backfill-embeddings
+(this table never needed one before — every prior write path embedded synchronously and
+successfully, or failed the whole insert). Verification involved diagnosing 3 real Playwright-side
+false alarms via direct DB inspection before finding the real bug — see the phase7-009 report for
+the full arc; each dead end was confirmed via the database, never assumed.
 phase7-008 built real episodic chat memory (user asked for 4 things: persistent memory, RAG,
 Knowledge auto-summarize, multi-tab). New chat_conversations/chat_messages tables — chat was
 previously pure in-memory React state with zero DB backing (confirmed via a dedicated research
@@ -165,7 +184,8 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   `/deals/{id}/draft/{memo,deck,email,summary}`, `/documents/{id}/download`,
   `/documents/backfill-embeddings`, `/deals/{id}/documents/from-url`,
   `/deals/{id}/conversations` (GET+POST) + `/conversations/{id}/messages` +
-  `/conversations/backfill-embeddings`.
+  `/conversations/backfill-embeddings` + `/conversations/{id}` (DELETE) +
+  `/admin/knowledge-base/backfill-embeddings`.
   `sys.path` self-bootstraps (D-009). Verified: mixing Claude's `web_search` server tool with a
   custom structured-output tool in one call works (agents/learning_agent.py) — untested before
   phase6-003, don't assume it doesn't work if reconsidering agents/industry_brief.py's
@@ -198,7 +218,13 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   `backend/app/services/chat_conversations.py::backfill_missing_message_embeddings()` exists
   because real-time per-message embedding is genuinely rate-limit-prone (unlike documents.py's
   batchable case) — call it via `POST /conversations/backfill-embeddings` if chat RAG search seems
-  to be missing recent messages.
+  to be missing recent messages. `force_digest_conversation()` (phase7-009) is the same digest but
+  bypasses the 10-message threshold, used by `DELETE /conversations/{id}` (deleting a tab digests
+  whatever's undigested first, best-effort). `agents/knowledge.py::backfill_missing_embeddings()` +
+  `POST /admin/knowledge-base/backfill-embeddings` (phase7-009) exist because `_run_digest()` can
+  now insert a `knowledge_base` row with `embedding=None` on a Voyage failure rather than
+  discarding the whole digest — don't "fix" that by making the embed call blocking again, that's
+  the exact real bug phase7-009 found and fixed.
 - `agents/evals.py`: real eval cases only exist for pricing_advisor, ic_memo_drafter, risk_flagger
   — `run_eval()` returns `pass_rate: None` honestly for any other agent rather than faking a score.
   Grading is a real second Claude call (`_grade()`), not a keyword/string match — don't replace it

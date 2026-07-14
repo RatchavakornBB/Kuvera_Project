@@ -309,3 +309,25 @@ WebSocket test proved conversation continuity and genuine RAG recall
 content), the digest produced a real richly-detailed knowledge_base
 row, and a real browser test confirmed tab creation/auto-titling/
 switching correctly reloads real persisted history per tab.
+
+phase7-009-delete-conversation-with-digest — user asked for tabs to
+be deletable, summarizing into memory first. Reused phase7-008's
+digest machinery: force_digest_conversation() bypasses the normal
+10-message threshold. delete_conversation() digests (best-effort)
+then deletes regardless, returning an honest digested:true/false.
+Verification hit 3 real Playwright-side false alarms (a too-short
+fixed wait given real added chat latency; .last() grabbing the wrong
+tab since list_conversations() orders most-recent-first, not last;
+a response-capture race against React's re-render) — each diagnosed
+via direct DB inspection rather than assumed, before a properly-
+synchronized 4th attempt gave a clean UI pass but surfaced a real
+digested:false. Reproducing that directly found a genuine bug:
+_run_digest() discarded an entire already-synthesized real digest
+when the trailing embedding call hit a real Voyage 429 (earned from
+this session's own heavy testing). Fixed by making the embedding
+step its own try/except (embedding=None on failure), matching
+documents.py's established pattern — added the missing
+knowledge_base counterpart, backfill_missing_embeddings() +
+POST /admin/knowledge-base/backfill-embeddings. Final direct test
+under a real active rate limit confirmed digested:true with
+embedding=None, then confirmed the new backfill recovered it.
