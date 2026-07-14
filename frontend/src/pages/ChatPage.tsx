@@ -1,7 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { fetchDeals, fetchDocuments, documentDownloadUrl, createDeal, addLinkSource } from '../lib/api';
+import {
+  fetchDeals,
+  fetchDocuments,
+  documentDownloadUrl,
+  createDeal,
+  addLinkSource,
+  fetchConversations,
+} from '../lib/api';
 import { statusColor } from '../lib/dealStatus';
 import { ChatMessage } from '../components/chat/ChatMessage';
 import { ChatArtifactCard } from '../components/chat/ChatArtifactCard';
@@ -37,6 +44,46 @@ export function ChatPage() {
     queryFn: () => fetchDocuments({ deal_id: selectedDeal!.id }),
     enabled: !!selectedDeal,
   });
+
+  const { data: conversations } = useQuery({
+    queryKey: ['conversations', selectedDeal?.id],
+    queryFn: () => fetchConversations(selectedDeal!.id),
+    enabled: !!selectedDeal,
+  });
+
+  // Real episodic memory, not just an in-page thread: switching to a
+  // different deal loads that deal's most recent persisted conversation
+  // (or starts a fresh one if it has none yet) instead of carrying over
+  // whatever was on screen for the previous deal. lastDealIdRef only
+  // advances once we've actually acted on the change (not immediately),
+  // so this doesn't skip itself the moment `conversations` finishes
+  // loading and re-triggers the effect.
+  const lastDealIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!selectedDeal) {
+      if (lastDealIdRef.current !== undefined) {
+        chat.startNewConversation();
+        lastDealIdRef.current = undefined;
+      }
+      return;
+    }
+    if (selectedDeal.id === lastDealIdRef.current) return;
+    if (conversations === undefined) return; // wait for this deal's own query to resolve
+    lastDealIdRef.current = selectedDeal.id;
+    if (conversations.length > 0) {
+      chat.switchConversation(conversations[0].id);
+    } else {
+      chat.startNewConversation();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeal?.id, conversations]);
+
+  useEffect(() => {
+    if (chat.conversationId) {
+      queryClient.invalidateQueries({ queryKey: ['conversations', selectedDeal?.id] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat.conversationId]);
 
   const createMutation = useMutation({
     mutationFn: createDeal,
@@ -170,6 +217,35 @@ export function ChatPage() {
           <div className="flex-1" />
           <div className="text-[10px] text-gray">View agent activity</div>
         </div>
+
+        {selectedDeal && (
+          <div className="flex items-center gap-1 overflow-x-auto border-b border-grid bg-terminal-black px-3 py-1.5">
+            {conversations?.map((c) => {
+              const isActive = chat.conversationId === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => chat.switchConversation(c.id)}
+                  className="shrink-0 cursor-pointer whitespace-nowrap rounded-sm border-none px-2.5 py-1 text-[10.5px]"
+                  style={{
+                    background: isActive ? 'var(--color-panel)' : 'transparent',
+                    color: isActive ? 'var(--color-violet)' : 'var(--color-gray)',
+                  }}
+                  title={c.title ?? 'New conversation'}
+                >
+                  {(c.title ?? 'New conversation').slice(0, 28)}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => chat.startNewConversation()}
+              className="shrink-0 cursor-pointer rounded-sm border-none bg-transparent px-2 py-1 text-[12px] text-violet"
+              title="Start a new conversation"
+            >
+              +
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto px-6 py-4">
           {chat.messages.length === 0 && (

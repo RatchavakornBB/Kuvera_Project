@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChatMessageData } from '../components/chat/ChatMessage';
+import { fetchConversationMessages } from './api';
 
 const WS_URL = (import.meta.env.VITE_WS_URL as string | undefined) ?? 'ws://localhost:8000/chat';
 
@@ -15,14 +16,18 @@ interface ServerMessage {
   role: 'assistant';
   text: string;
   sources?: string[];
-  artifact?: { title: string; type: string };
+  artifact?: { title: string; type: string; deal_id?: string };
+  conversation_id?: string;
 }
 
 export function useChatSocket() {
+  const [conversationId, setConversationId] = useState<string | undefined>();
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const [busy, setBusy] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const conversationIdRef = useRef<string | undefined>(undefined);
+  conversationIdRef.current = conversationId;
 
   useEffect(() => {
     const socket = new WebSocket(WS_URL);
@@ -32,6 +37,13 @@ export function useChatSocket() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       const data: ServerMessage = JSON.parse(event.data);
       setBusy(false);
+      // A brand-new conversation is auto-created server-side on first
+      // message — pick up its real id so the next send() in this tab
+      // continues the same persisted conversation instead of starting
+      // a new one every turn.
+      if (data.conversation_id && data.conversation_id !== conversationIdRef.current) {
+        setConversationId(data.conversation_id);
+      }
       setMessages((prev) => [
         ...prev,
         { id: crypto.randomUUID(), role: 'assistant', text: data.text, artifact: data.artifact },
@@ -47,7 +59,7 @@ export function useChatSocket() {
   function send(text: string, dealId?: string) {
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'user', text }]);
     setBusy(true);
-    socketRef.current?.send(JSON.stringify({ message: text, deal_id: dealId }));
+    socketRef.current?.send(JSON.stringify({ message: text, deal_id: dealId, conversation_id: conversationId }));
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
@@ -63,5 +75,23 @@ export function useChatSocket() {
     }, RESPONSE_TIMEOUT_MS);
   }
 
-  return { messages, busy, send };
+  async function switchConversation(newConversationId: string) {
+    setConversationId(newConversationId);
+    const history = await fetchConversationMessages(newConversationId);
+    setMessages(
+      history.map((m) => ({
+        id: m.id,
+        role: m.role,
+        text: m.text,
+        artifact: m.artifact ?? undefined,
+      })),
+    );
+  }
+
+  function startNewConversation() {
+    setConversationId(undefined);
+    setMessages([]);
+  }
+
+  return { conversationId, messages, busy, send, switchConversation, startNewConversation };
 }

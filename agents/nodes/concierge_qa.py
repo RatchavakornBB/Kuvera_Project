@@ -4,6 +4,7 @@ across deals — enforced structurally by agents/deal_context.py, which
 never fetches another deal's rows in the first place)."""
 
 from agents.adapters.model_adapter import call_model
+from agents.chat_memory import chat_history_context
 from agents.deal_context import build_deal_context
 from agents.retry import with_retry
 
@@ -35,7 +36,7 @@ SYSTEM_PROMPT = (
 
 
 def _run_once(deal_id: str, question: str) -> dict:
-    context = build_deal_context(deal_id)
+    context = build_deal_context(deal_id) + chat_history_context(deal_id, question)
 
     response = call_model(
         "concierge_qa",

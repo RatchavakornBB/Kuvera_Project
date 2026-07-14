@@ -162,6 +162,53 @@ export async function addLinkSource(dealId: string, url: string): Promise<ApiDoc
   return res.json();
 }
 
+export interface ApiChatConversation {
+  id: string;
+  deal_id: string;
+  title: string | null;
+  digested_message_count: number;
+  created_at: string;
+  last_message_at: string;
+}
+
+export interface ApiChatMessage {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  sources: string[] | null;
+  artifact: { title: string; type: string; deal_id?: string } | null;
+  created_at: string;
+}
+
+export async function fetchConversations(dealId: string): Promise<ApiChatConversation[]> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/conversations`);
+  if (!res.ok) {
+    throw new Error(`GET /deals/${dealId}/conversations failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function createConversation(dealId: string, title?: string): Promise<ApiChatConversation> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/conversations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: title ?? null }),
+  });
+  if (!res.ok) {
+    throw new Error(`POST /deals/${dealId}/conversations failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchConversationMessages(conversationId: string): Promise<ApiChatMessage[]> {
+  const res = await fetch(`${API_BASE_URL}/conversations/${conversationId}/messages`);
+  if (!res.ok) {
+    throw new Error(`GET /conversations/${conversationId}/messages failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export interface AnalyzeResult {
   summary: string;
   risk_flags: { severity: string; description: string; source_excerpt: string }[];
