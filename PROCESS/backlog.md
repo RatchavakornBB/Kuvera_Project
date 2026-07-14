@@ -253,3 +253,12 @@ ChatPage.tsx (phase7-001). Fixed both: preview trims to a word
 boundary, artifact carries deal_id, Open navigates to
 /deals/{id}?tab=analysis (new real deep-linking capability added to
 DealDetail.tsx). Verification incomplete — see Blocked above.
+
+phase7-005-sources-document-list — user asked for the Chat page's
+Sources panel to show a deal's related documents when clicked into.
+Clicking a Source now selects it as chat context (unchanged) and
+expands a real document list underneath (fetchDocuments({deal_id}),
+same function used elsewhere in the app) with real download links.
+No new backend needed, no LLM call involved — fully verified in a
+real browser despite the current Anthropic API credit outage
+blocking phase7-004's remaining check.

@@ -1,18 +1,20 @@
 ## Current
 Phase 6 (post-5-day-plan extension) is fully complete (see prior entries below). Phase 7 is
 underway: phase7-001 rebuilt Chat as a real dedicated page, phase7-002 added real .docx document
-support, phase7-003 fixed a real live hang, phase7-004 fixed the chat artifact "Open" button (never
-wired to anything) + a hardcoded 300-char preview cutoff the user mistook for a token limit — but
-its live-verification is INCOMPLETE, see Blocked on below.
+support, phase7-003 fixed a real live hang, phase7-004 fixed the chat artifact "Open" button +
+preview truncation (live-verification still INCOMPLETE, blocked — see below), phase7-005 added a
+real per-deal document list to the Chat Sources panel (no API dependency, fully verified).
 Active task: none actively being worked, but phase7-004 has an open verification item
-Status: blocked (external)
-Last checkpoint commit: c89b1e2
+Status: blocked (external, on phase7-004's remaining item only — everything else is unblocked)
+Last checkpoint commit: ab4a86d
 Blocked on: **Anthropic API account is out of credits** — hit live during phase7-004 testing
 ("Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to
 upgrade or purchase credits."). This blocks EVERY real Claude-backed feature in the app right now
 (analyze, chat, drafting, learning, evals — everything that calls call_model()), not just the
 current task. Needs the user to top up the Anthropic account before any further live verification
-or real usage is possible. Re-run phase7-004's remaining live chat-round-trip check once resolved.
+or real usage of AI features is possible. Non-AI features (e.g. phase7-005's document listing)
+remain fully buildable/verifiable in the meantime. Re-run phase7-004's remaining live
+chat-round-trip check once resolved.
 
 ## Next up
 Once API credits are restored: finish phase7-004's one open verification item (full live chat
@@ -20,6 +22,11 @@ round-trip: send a message, get the analyst_lead response, click Open, confirm l
 Analysis tab — the URL-navigation half was already verified without needing a live API call).
 Nothing else queued. If the user wants further work, check PROCESS/backlog.md's Done section for
 full history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+phase7-005 added a real per-deal document list to ChatPage.tsx's Sources panel: clicking a deal
+selects it as chat context (unchanged) AND expands its real documents (fetchDocuments({deal_id}),
+same function Documents & Contracts/Deal File Library use) with real download links
+(documentDownloadUrl()) — no new backend endpoint, no LLM call involved, so fully verified despite
+the current API credit outage.
 phase7-004 fixed: the Chat assistant's analyst_lead response preview was hard-cut at 300 chars
 (backend/app/routes/chat.py) — confirmed via the real stored summary (2575 chars, complete
 sentence, well under doc_summarizer's real 1536-token ceiling) that this was NOT an LLM token
