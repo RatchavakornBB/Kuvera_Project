@@ -4,6 +4,7 @@ Storage object AND a Document row together — never one without the other
 upload succeeds, the storage object is removed rather than left orphaned.
 """
 
+import re
 import uuid
 from typing import Any
 
@@ -12,6 +13,7 @@ from psycopg.rows import dict_row
 
 from agents.config import settings
 from agents.embeddings import embed_text, embed_texts
+from agents.web_source import fetch_url_as_text
 
 from app.db import get_client
 
@@ -19,7 +21,10 @@ BUCKET = "deal-documents"
 
 # Every read path uses this explicit list rather than "*" — documents.embedding
 # is a 1024-float vector and has no business appearing in an API response.
-DOCUMENT_COLUMNS = "id, deal_id, name, type, storage_path, status, summary, key_date, clauses, uploaded_at, created_at"
+DOCUMENT_COLUMNS = (
+    "id, deal_id, name, type, storage_path, status, summary, key_date, clauses, source_url, "
+    "uploaded_at, created_at"
+)
 
 
 def _embed_document_text(text: str) -> list[float] | None:
@@ -36,7 +41,9 @@ def _embed_document_text(text: str) -> list[float] | None:
         return None
 
 
-def upload_document(deal_id: str, filename: str, content: bytes, content_type: str) -> dict[str, Any]:
+def upload_document(
+    deal_id: str, filename: str, content: bytes, content_type: str, source_url: str | None = None
+) -> dict[str, Any]:
     client = get_client()
     storage_path = f"{deal_id}/{uuid.uuid4()}-{filename}"
 
@@ -51,9 +58,10 @@ def upload_document(deal_id: str, filename: str, content: bytes, content_type: s
                 {
                     "deal_id": deal_id,
                     "name": filename,
-                    "type": _infer_type(filename),
+                    "type": "Link" if source_url else _infer_type(filename),
                     "storage_path": storage_path,
                     "status": "received",
+                    "source_url": source_url,
                     "embedding": _embed_document_text(filename),
                 }
             )
@@ -66,6 +74,20 @@ def upload_document(deal_id: str, filename: str, content: bytes, content_type: s
     doc = res.data[0]
     doc.pop("embedding", None)
     return doc
+
+
+def create_document_from_url(deal_id: str, url: str) -> dict[str, Any]:
+    """NotebookLM-style "add a link" source — fetches the real page content
+    server-side (agents/web_source.py, includes SSRF protection) and stores
+    it through the exact same real write path as a file upload, just with
+    source_url set for provenance. The extracted text is stored as a real
+    .txt document, which agents/documents.py::build_content_block() already
+    knows how to feed to Claude — link sources are just as analyzable as an
+    uploaded file, not a lesser citation-only stub."""
+    title, text = fetch_url_as_text(url)
+    safe_title = re.sub(r"[^\w\s.-]", "", title).strip()[:80] or "web-source"
+    filename = f"{safe_title}.txt"
+    return upload_document(deal_id, filename, text.encode("utf-8"), "text/plain", source_url=url)
 
 
 def update_document_summary(document_id: str, fields: dict[str, Any]) -> None:

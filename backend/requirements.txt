@@ -13,3 +13,4 @@ httpx
 python-docx
 python-pptx
 apscheduler
+beautifulsoup4

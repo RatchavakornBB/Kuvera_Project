@@ -2,12 +2,19 @@ import mimetypes
 
 from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import Response
+from pydantic import BaseModel
+
+from agents.web_source import UnsafeUrlError
 
 from app.services import deals as deals_service
 from app.services import documents as documents_service
 
 router = APIRouter(prefix="/deals", tags=["documents"])
 library_router = APIRouter(prefix="/documents", tags=["documents"])
+
+
+class AddLinkSource(BaseModel):
+    url: str
 
 
 @router.post("/{deal_id}/documents")
@@ -22,6 +29,18 @@ async def upload_document(deal_id: str, file: UploadFile):
         content=content,
         content_type=file.content_type or "application/octet-stream",
     )
+
+
+@router.post("/{deal_id}/documents/from-url")
+def add_link_source(deal_id: str, body: AddLinkSource):
+    if deals_service.get_deal(deal_id) is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    try:
+        return documents_service.create_document_from_url(deal_id, body.url)
+    except UnsafeUrlError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=f"Could not fetch that URL: {e}") from e
 
 
 @library_router.get("")

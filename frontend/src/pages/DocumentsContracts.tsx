@@ -6,7 +6,7 @@ import { DocumentDetailPanel } from '../components/documents/DocumentDetailPanel
 import { UploadDocumentModal } from '../components/documents/UploadDocumentModal';
 import { KeyDatesStrip } from '../components/documents/KeyDatesStrip';
 
-const DOC_TYPES = ['PDF', 'Financial', 'Document', 'Image', 'Contract'];
+const DOC_TYPES = ['PDF', 'Financial', 'Document', 'Image', 'Contract', 'Link'];
 const DOC_STATUSES = ['requested', 'received', 'pending', 'under_review', 'approved', 'rejected'];
 const SEARCH_DEBOUNCE_MS = 400;
 

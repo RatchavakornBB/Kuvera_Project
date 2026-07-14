@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { fetchDeals, fetchDocuments, documentDownloadUrl, createDeal } from '../lib/api';
+import { fetchDeals, fetchDocuments, documentDownloadUrl, createDeal, addLinkSource } from '../lib/api';
 import { statusColor } from '../lib/dealStatus';
 import { ChatMessage } from '../components/chat/ChatMessage';
 import { ChatArtifactCard } from '../components/chat/ChatArtifactCard';
@@ -26,6 +26,7 @@ export function ChatPage() {
   const { chat, selectedDeal, setSelectedDeal } = useOutletContext<ShellContext>();
   const [mode, setMode] = useState<(typeof MODES)[number]['key']>('concierge');
   const [newDealOpen, setNewDealOpen] = useState(false);
+  const [linkInput, setLinkInput] = useState('');
   const queryClient = useQueryClient();
 
   const { data: deals } = useQuery({ queryKey: ['deals'], queryFn: fetchDeals });
@@ -42,6 +43,14 @@ export function ChatPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       setNewDealOpen(false);
+    },
+  });
+
+  const addLinkMutation = useMutation({
+    mutationFn: (url: string) => addLinkSource(selectedDeal!.id, url),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents', { deal_id: selectedDeal?.id }] });
+      setLinkInput('');
     },
   });
 
@@ -84,8 +93,21 @@ export function ChatPage() {
                     )}
                     {selectedDealDocuments?.map((doc) => (
                       <div key={doc.id} className="flex items-center gap-1.5 py-1">
-                        <div className="h-2 w-2 shrink-0 rounded-sm bg-gray" />
-                        <div className="min-w-0 flex-1 truncate text-[10.5px] text-[#e7e7ea]">{doc.name}</div>
+                        <div className="shrink-0 text-[9px] text-gray">{doc.source_url ? '🔗' : '▪'}</div>
+                        {doc.source_url ? (
+                          <a
+                            href={doc.source_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="min-w-0 flex-1 truncate text-[10.5px] text-[#e7e7ea] no-underline hover:text-blue"
+                            title={doc.source_url}
+                          >
+                            {doc.name.replace(/\.txt$/, '')}
+                          </a>
+                        ) : (
+                          <div className="min-w-0 flex-1 truncate text-[10.5px] text-[#e7e7ea]">{doc.name}</div>
+                        )}
                         {doc.storage_path && (
                           <a
                             href={documentDownloadUrl(doc.id)}
@@ -98,6 +120,26 @@ export function ChatPage() {
                         )}
                       </div>
                     ))}
+
+                    <div className="mt-1.5 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        value={linkInput}
+                        onChange={(e) => setLinkInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && linkInput.trim() && addLinkMutation.mutate(linkInput.trim())}
+                        placeholder="Paste a URL…"
+                        className="min-w-0 flex-1 rounded border border-grid bg-terminal-black px-2 py-1 text-[10px] text-white placeholder:text-gray"
+                      />
+                      <button
+                        onClick={() => linkInput.trim() && addLinkMutation.mutate(linkInput.trim())}
+                        disabled={!linkInput.trim() || addLinkMutation.isPending}
+                        className="shrink-0 cursor-pointer rounded border-none bg-violet px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-40"
+                      >
+                        {addLinkMutation.isPending ? '…' : '+ Link'}
+                      </button>
+                    </div>
+                    {addLinkMutation.isError && (
+                      <div className="mt-1 text-[9.5px] text-red">{String((addLinkMutation.error as Error)?.message ?? addLinkMutation.error)}</div>
+                    )}
                   </div>
                 )}
               </div>

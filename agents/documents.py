@@ -34,9 +34,11 @@ _MEDIA_TYPES = {
     "gif": "image/gif",
     "webp": "image/webp",
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "txt": "text/plain",
 }
 
 DOCX_MEDIA_TYPE = _MEDIA_TYPES["docx"]
+TEXT_MEDIA_TYPE = _MEDIA_TYPES["txt"]
 
 # Claude's Messages API content block "type" differs by media_type — a PDF is
 # a `document` block, an image is an `image` block, and a Word doc becomes a
@@ -62,6 +64,9 @@ def build_content_block(content: bytes, media_type: str) -> dict[str, Any]:
 
     if media_type == DOCX_MEDIA_TYPE:
         return {"type": "text", "text": f"[Extracted text from Word document]\n\n{_extract_docx_text(content)}"}
+
+    if media_type == TEXT_MEDIA_TYPE:
+        return {"type": "text", "text": content.decode("utf-8", errors="replace")}
 
     block_type = "document" if media_type == "application/pdf" else "image"
     return {
@@ -90,7 +95,7 @@ def fetch_document(document_id: str) -> tuple[bytes, str, str]:
     if media_type is None:
         raise ValueError(
             f"Unsupported document type for direct model reading: .{ext} "
-            "(PDF, images, and .docx are supported; audio/video have no native Claude "
+            "(PDF, images, .docx, and .txt are supported; audio/video have no native Claude "
             "Messages API content type and no real transcription pipeline exists here, "
             "not just missing glue code)"
         )

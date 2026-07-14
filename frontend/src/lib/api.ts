@@ -31,6 +31,7 @@ export interface ApiDocument {
   status: 'requested' | 'received' | 'pending' | 'under_review' | 'approved' | 'rejected';
   summary: string | null;
   key_date: string | null;
+  source_url: string | null;
   uploaded_at: string;
   clauses: { label: string; text: string }[];
 }
@@ -144,6 +145,19 @@ export async function uploadContract(dealId: string, file: File): Promise<Upload
   const res = await fetch(`${API_BASE_URL}/contracts`, { method: 'POST', body: formData });
   if (!res.ok) {
     throw new Error(`POST /contracts failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function addLinkSource(dealId: string, url: string): Promise<ApiDocument> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/documents/from-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.detail ?? `POST /deals/${dealId}/documents/from-url failed: ${res.status}`);
   }
   return res.json();
 }
