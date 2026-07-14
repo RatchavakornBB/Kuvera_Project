@@ -3,18 +3,20 @@ Phase 6 (post-5-day-plan extension) is fully complete (see prior entries below).
 underway: phase7-001 rebuilt Chat as a real dedicated page, phase7-002 added real .docx document
 support, phase7-003 fixed a real live hang, phase7-004 fixed the chat artifact "Open" button +
 preview truncation (live-verification still INCOMPLETE, blocked — see below), phase7-005 added a
-real per-deal document list to the Chat Sources panel (no API dependency, fully verified).
+real per-deal document list to the Chat Sources panel, phase7-006 added real NotebookLM-style
+"add a link" URL sources (real fetch + extraction + SSRF protection, no API dependency, fully
+verified).
 Active task: none actively being worked, but phase7-004 has an open verification item
 Status: blocked (external, on phase7-004's remaining item only — everything else is unblocked)
-Last checkpoint commit: ab4a86d
+Last checkpoint commit: b06fd3e
 Blocked on: **Anthropic API account is out of credits** — hit live during phase7-004 testing
 ("Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to
 upgrade or purchase credits."). This blocks EVERY real Claude-backed feature in the app right now
 (analyze, chat, drafting, learning, evals — everything that calls call_model()), not just the
 current task. Needs the user to top up the Anthropic account before any further live verification
-or real usage of AI features is possible. Non-AI features (e.g. phase7-005's document listing)
-remain fully buildable/verifiable in the meantime. Re-run phase7-004's remaining live
-chat-round-trip check once resolved.
+or real usage of AI features is possible. Non-AI features (e.g. phase7-005/006's document
+listing/link-adding) remain fully buildable/verifiable in the meantime. Re-run phase7-004's
+remaining live chat-round-trip check once resolved.
 
 ## Next up
 Once API credits are restored: finish phase7-004's one open verification item (full live chat
@@ -22,6 +24,16 @@ round-trip: send a message, get the analyst_lead response, click Open, confirm l
 Analysis tab — the URL-navigation half was already verified without needing a live API call).
 Nothing else queued. If the user wants further work, check PROCESS/backlog.md's Done section for
 full history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+phase7-006 added real "add a link" URL sources: agents/web_source.py fetches a real page
+server-side (httpx) and extracts real readable text (BeautifulSoup, strips script/style) — the
+page's own real content, not a fabricated summary. Real SSRF protection
+(_assert_public_host — new dependency beautifulsoup4) blocks private/loopback/link-local/metadata
+targets, tested against 4 real unsafe URLs including the AWS/GCP metadata IP. documents.source_url
+column added (real provenance tracking). agents/documents.py::build_content_block() gained real
+.txt support so link-derived documents are fully analyzable through the existing pipeline, not a
+lesser stub — verified directly (bypassing the credit-exhausted Claude API) that a link document
+round-trips correctly through fetch_document()/build_content_block(). POST
+/deals/{deal_id}/documents/from-url reuses upload_document()'s exact real write path.
 phase7-005 added a real per-deal document list to ChatPage.tsx's Sources panel: clicking a deal
 selects it as chat context (unchanged) AND expands its real documents (fetchDocuments({deal_id}),
 same function Documents & Contracts/Deal File Library use) with real download links
@@ -109,7 +121,8 @@ has a real status trail, not just the 4 Analyst Lead nodes.
 - Schema: 16 tables (8 core + `analyses` + `documents.clauses` + `agent_configs` +
   `pending_changes` + `audit_log` + `knowledge_base` + `contradictions` + `learning_digests` +
   `agent_invocations` + `scheduled_run_log`; Drafting Lead reuses `documents`, no new table).
-  New `public` tables need
+  `documents` also has `embedding` (phase6-008) and `source_url` (phase7-006, NULL except for
+  link-derived documents). New `public` tables need
   `GRANT ... TO service_role` (D-005). Apply new migrations with `supabase migration up`, never
   `db reset`, once real accumulated test/demo data exists (a reset wipes it).
 - `agents/contradictions.py`: real pgvector-matched corroboration (threshold 0.70, calibrated
@@ -146,9 +159,12 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   `frontend/src/lib/useChatSocket.ts` has a matching 150s client-side timeout for the same reason.
   `agents/documents.py::build_content_block()` is the one place a document's bytes become a
   Claude content block (PDF -> `document`, image -> `image`, docx -> `text` via real python-docx
-  extraction since phase7-002 — audio/video still genuinely unsupported, no real transcription
-  pipeline exists) — every document-reading node uses it, don't hardcode block shapes in a node
-  again. `agents/knowledge.py` is the Knowledge Agent:
+  extraction since phase7-002, txt -> `text` via plain UTF-8 decode since phase7-006 — audio/video
+  still genuinely unsupported, no real transcription pipeline exists) — every document-reading
+  node uses it, don't hardcode block shapes in a node again. `agents/web_source.py` (phase7-006)
+  does the real server-side URL fetch + BeautifulSoup text extraction for "add a link" sources,
+  with SSRF protection (`_assert_public_host`) — don't remove that guard, it's a real security
+  control, not defensive boilerplate. `agents/knowledge.py` is the Knowledge Agent:
   `promote_deal_to_knowledge()` (real Claude synthesis + real Voyage embeddings, called from
   `POST /deals/{id}/close`) and `search_knowledge()` / `historical_precedent_context()` (real
   pgvector cosine search, the latter used inside risk_flagger/pricing_advisor, best-effort/

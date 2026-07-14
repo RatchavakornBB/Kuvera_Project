@@ -262,3 +262,16 @@ same function used elsewhere in the app) with real download links.
 No new backend needed, no LLM call involved — fully verified in a
 real browser despite the current Anthropic API credit outage
 blocking phase7-004's remaining check.
+
+phase7-006-add-link-source — user asked if Sources could support
+adding a link, like NotebookLM. Built a real fetch-and-extract
+pipeline (agents/web_source.py: real httpx fetch + real BeautifulSoup
+text extraction, not a fabricated summary), with real SSRF protection
+(_assert_public_host, tested against 4 real unsafe targets incl. the
+AWS/GCP metadata IP, all blocked). documents.source_url column added
+for real provenance. build_content_block() gained real .txt support
+so link-derived documents are fully analyzable through the existing
+pipeline, verified directly bypassing the credit-exhausted Claude
+API. Reuses upload_document()'s exact real write path. Full real
+browser flow verified: paste URL -> real new document with real page
+title, working source link and download link, zero console errors.
