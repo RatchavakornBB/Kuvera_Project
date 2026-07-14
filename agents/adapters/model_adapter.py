@@ -45,9 +45,20 @@ def _provider_for(model_id: str) -> str:
     raise ValueError(f"Unrecognized model_id: {model_id}")
 
 
+# The SDK's own default timeout is generous (10 minutes) with no way for a
+# hung network call to fail loud sooner — a real hang was observed live
+# (a WebSocket /chat request stuck "thinking" for 5+ minutes with no error,
+# no LangGraph checkpoint ever written, while re-running the identical call
+# moments later completed cleanly in ~20s). An explicit, tighter timeout
+# means a stall converts into a real exception with_retry already knows how
+# to handle (bounded retry, then a clean NodeFailure) instead of silently
+# blocking a thread-pool worker for up to 10 minutes.
+REQUEST_TIMEOUT_SECONDS = 120.0
+
+
 @lru_cache
 def _anthropic_client() -> anthropic.Anthropic:
-    return anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    return anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=REQUEST_TIMEOUT_SECONDS)
 
 
 def call_model(
