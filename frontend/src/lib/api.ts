@@ -209,6 +209,20 @@ export async function fetchConversationMessages(conversationId: string): Promise
   return res.json();
 }
 
+export interface DeleteConversationResult {
+  deleted: boolean;
+  digested: boolean;
+  knowledge_base_id: string | null;
+}
+
+export async function deleteConversation(conversationId: string): Promise<DeleteConversationResult> {
+  const res = await fetch(`${API_BASE_URL}/conversations/${conversationId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    throw new Error(`DELETE /conversations/${conversationId} failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export interface AnalyzeResult {
   summary: string;
   risk_flags: { severity: string; description: string; source_excerpt: string }[];
@@ -301,6 +315,32 @@ export interface ApiAuditEntry {
 export async function fetchAgentConfigs(): Promise<ApiAgentConfig[]> {
   const res = await fetch(`${API_BASE_URL}/admin/agents`);
   if (!res.ok) throw new Error(`GET /admin/agents failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createAgent(agentName: string, modelId: string, skillContent = ''): Promise<ApiAgentConfig> {
+  const res = await fetch(`${API_BASE_URL}/admin/agents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ agent_name: agentName, model_id: modelId, skill_content: skillContent }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(`POST /admin/agents failed: ${res.status} ${body ? JSON.stringify(body.detail) : ''}`);
+  }
+  return res.json();
+}
+
+export async function addSkillInstruction(agentName: string, instruction: string): Promise<ApiPendingChange> {
+  const res = await fetch(`${API_BASE_URL}/admin/agents/${agentName}/add-skill`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instruction }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(`POST /admin/agents/${agentName}/add-skill failed: ${res.status} ${body ? JSON.stringify(body.detail) : ''}`);
+  }
   return res.json();
 }
 

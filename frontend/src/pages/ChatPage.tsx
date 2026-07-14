@@ -8,6 +8,7 @@ import {
   createDeal,
   addLinkSource,
   fetchConversations,
+  deleteConversation,
 } from '../lib/api';
 import { statusColor } from '../lib/dealStatus';
 import { ChatMessage } from '../components/chat/ChatMessage';
@@ -98,6 +99,25 @@ export function ChatPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', { deal_id: selectedDeal?.id }] });
       setLinkInput('');
+    },
+  });
+
+  // Deleting a tab folds anything not yet digested into a real Knowledge
+  // Base record first (backend/app/services/chat_conversations.py::
+  // delete_conversation), so closing a short conversation doesn't just
+  // lose it — the frontend doesn't need to trigger that separately.
+  const deleteConversationMutation = useMutation({
+    mutationFn: (conversationId: string) => deleteConversation(conversationId),
+    onSuccess: (_result, deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', selectedDeal?.id] });
+      if (chat.conversationId === deletedId) {
+        const remaining = conversations?.filter((c) => c.id !== deletedId) ?? [];
+        if (remaining.length > 0) {
+          chat.switchConversation(remaining[0].id);
+        } else {
+          chat.startNewConversation();
+        }
+      }
     },
   });
 
@@ -223,18 +243,31 @@ export function ChatPage() {
             {conversations?.map((c) => {
               const isActive = chat.conversationId === c.id;
               return (
-                <button
+                <div
                   key={c.id}
-                  onClick={() => chat.switchConversation(c.id)}
-                  className="shrink-0 cursor-pointer whitespace-nowrap rounded-sm border-none px-2.5 py-1 text-[10.5px]"
-                  style={{
-                    background: isActive ? 'var(--color-panel)' : 'transparent',
-                    color: isActive ? 'var(--color-violet)' : 'var(--color-gray)',
-                  }}
-                  title={c.title ?? 'New conversation'}
+                  className="flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-1"
+                  style={{ background: isActive ? 'var(--color-panel)' : 'transparent' }}
                 >
-                  {(c.title ?? 'New conversation').slice(0, 28)}
-                </button>
+                  <button
+                    onClick={() => chat.switchConversation(c.id)}
+                    className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-[10.5px]"
+                    style={{ color: isActive ? 'var(--color-violet)' : 'var(--color-gray)' }}
+                    title={c.title ?? 'New conversation'}
+                  >
+                    {(c.title ?? 'New conversation').slice(0, 28)}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteConversationMutation.mutate(c.id);
+                    }}
+                    disabled={deleteConversationMutation.isPending}
+                    className="cursor-pointer border-none bg-transparent p-0 text-[10px] text-gray hover:text-red disabled:opacity-40"
+                    title="Delete this conversation (summarizes into Knowledge Base first)"
+                  >
+                    ×
+                  </button>
+                </div>
               );
             })}
             <button

@@ -33,3 +33,8 @@ def refresh_industry_brief(body: RefreshIndustryBrief):
 @router.post("/refresh-competitor-brief")
 def refresh_competitor_brief(body: RefreshCompetitorBrief):
     return knowledge_service.refresh_competitor_brief(body.company_name, body.industry)
+
+
+@router.post("/backfill-embeddings")
+def backfill_embeddings():
+    return {"embedded_count": knowledge_service.backfill_missing_embeddings()}

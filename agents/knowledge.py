@@ -287,3 +287,27 @@ def list_knowledge(industry: str | None = None, category: str | None = None) -> 
     if category:
         query = query.eq("category", category)
     return query.order("created_at", desc=True).execute().data
+
+
+def backfill_missing_embeddings() -> int:
+    """Catch-up for knowledge_base rows whose real embedding call failed at
+    write time — a genuine, observed failure mode: agents/chat_memory.py's
+    digest path deliberately inserts a record with embedding=None rather
+    than discarding an already-synthesized digest over a Voyage rate limit
+    (real 429s were hit during that feature's own testing). Batches every
+    text into ONE Voyage call, the same fix already applied to
+    documents.py/chat_conversations.py for the identical problem."""
+    client = get_client()
+    rows = client.table("knowledge_base").select("id, summary").is_("embedding", "null").execute().data
+    if not rows:
+        return 0
+    texts = [r["summary"] for r in rows]
+    try:
+        embeddings = embed_texts(texts, input_type="document")
+    except Exception:
+        return 0
+    count = 0
+    for row, embedding in zip(rows, embeddings):
+        client.table("knowledge_base").update({"embedding": embedding}).eq("id", row["id"]).execute()
+        count += 1
+    return count

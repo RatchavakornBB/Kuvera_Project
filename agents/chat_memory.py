@@ -100,6 +100,30 @@ def chat_history_context(deal_id: str, query_text: str, limit: int = 3) -> str:
     return "\n".join(lines)
 
 
+def _load_convo_and_new_messages(conversation_id: str) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
+    client = get_client()
+    convo = (
+        client.table("chat_conversations")
+        .select("id, deal_id, title, digested_message_count")
+        .eq("id", conversation_id)
+        .execute()
+        .data
+    )
+    if not convo:
+        return None
+    convo = convo[0]
+
+    messages = (
+        client.table("chat_messages")
+        .select("id, role, text, created_at")
+        .eq("conversation_id", conversation_id)
+        .order("created_at")
+        .execute()
+        .data
+    )
+    return convo, messages[convo["digested_message_count"]:]
+
+
 def maybe_digest_conversation(conversation_id: str) -> dict[str, Any] | None:
     """Called after every saved message. Fires a real digest only once a
     conversation has accumulated DIGEST_TRIGGER_MESSAGE_COUNT genuinely new
@@ -108,33 +132,37 @@ def maybe_digest_conversation(conversation_id: str) -> dict[str, Any] | None:
     Best-effort: a digest failure never breaks the message-send path that
     triggered it."""
     try:
-        client = get_client()
-        convo = (
-            client.table("chat_conversations")
-            .select("id, deal_id, title, digested_message_count")
-            .eq("id", conversation_id)
-            .execute()
-            .data
-        )
-        if not convo:
+        loaded = _load_convo_and_new_messages(conversation_id)
+        if loaded is None:
             return None
-        convo = convo[0]
-
-        messages = (
-            client.table("chat_messages")
-            .select("id, role, text, created_at")
-            .eq("conversation_id", conversation_id)
-            .order("created_at")
-            .execute()
-            .data
-        )
-        new_messages = messages[convo["digested_message_count"]:]
+        convo, new_messages = loaded
         if len(new_messages) < DIGEST_TRIGGER_MESSAGE_COUNT:
             return None
 
-        return _run_digest(convo, new_messages, total_message_count=len(messages))
+        total = convo["digested_message_count"] + len(new_messages)
+        return _run_digest(convo, new_messages, total_message_count=total)
     except Exception:
         return None
+
+
+def force_digest_conversation(conversation_id: str) -> dict[str, Any] | None:
+    """Same real synthesis as maybe_digest_conversation(), but bypasses the
+    DIGEST_TRIGGER_MESSAGE_COUNT threshold — called right before a
+    conversation is deleted (user-requested: nothing discussed should be
+    lost just because a tab gets closed before hitting the normal
+    every-10-messages cadence). Returns None if there's nothing new to
+    digest (already fully digested, or genuinely empty) OR if the real
+    Claude/embedding call fails — the caller decides whether a failed
+    digest should still allow deletion to proceed."""
+    loaded = _load_convo_and_new_messages(conversation_id)
+    if loaded is None:
+        return None
+    convo, new_messages = loaded
+    if not new_messages:
+        return None
+
+    total = convo["digested_message_count"] + len(new_messages)
+    return _run_digest(convo, new_messages, total_message_count=total)
 
 
 def _run_digest(convo: dict[str, Any], new_messages: list[dict[str, Any]], total_message_count: int) -> dict[str, Any]:
@@ -170,7 +198,19 @@ def _run_digest(convo: dict[str, Any], new_messages: list[dict[str, Any]], total
         summary_lines += [f"- {q}" for q in digest["open_questions"]]
     summary = "\n".join(summary_lines)
 
-    embedding = embed_texts([summary], input_type="document")[0]
+    # Best-effort, deliberately decoupled from the real synthesis above: an
+    # embeddings-provider failure here (a real Voyage 429 was hit during this
+    # feature's own testing, from cumulative rapid real API usage) must not
+    # discard a digest whose actual content already synthesized correctly —
+    # the record is still inserted with embedding=None and stays findable by
+    # every other means (source_deal_id, category), just not yet via
+    # semantic search until a future backfill re-embeds it. Losing the whole
+    # real synthesis over a supplementary embedding hiccup would be strictly
+    # worse than a documents.py-style null-embedding row.
+    try:
+        embedding = embed_texts([summary], input_type="document")[0]
+    except Exception:
+        embedding = None
 
     record = (
         client.table("knowledge_base")

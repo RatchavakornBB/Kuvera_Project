@@ -33,6 +33,13 @@ def get_messages(conversation_id: str):
     return chat_conversations_service.get_messages(conversation_id)
 
 
+@library_router.delete("/{conversation_id}")
+def delete_conversation(conversation_id: str):
+    if chat_conversations_service.get_conversation(conversation_id) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return chat_conversations_service.delete_conversation(conversation_id)
+
+
 @library_router.post("/backfill-embeddings")
 def backfill_embeddings():
     return {"embedded_count": chat_conversations_service.backfill_missing_message_embeddings()}

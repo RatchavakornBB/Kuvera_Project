@@ -2,6 +2,7 @@ from typing import Any
 
 from agents.industry_brief import refresh_competitor_brief as _refresh_competitor_brief
 from agents.industry_brief import refresh_industry_brief as _refresh_industry_brief
+from agents.knowledge import backfill_missing_embeddings as _backfill_missing_embeddings
 from agents.knowledge import list_knowledge as _list_knowledge
 from agents.knowledge import search_knowledge as _search_knowledge
 
@@ -20,3 +21,7 @@ def refresh_industry_brief(industry: str) -> dict[str, Any]:
 
 def refresh_competitor_brief(company_name: str, industry: str) -> dict[str, Any]:
     return _refresh_competitor_brief(company_name, industry)
+
+
+def backfill_missing_embeddings() -> int:
+    return _backfill_missing_embeddings()

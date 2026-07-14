@@ -9,6 +9,7 @@ in agents/knowledge.py) rather than living only in ephemeral React state.
 from datetime import datetime, timezone
 from typing import Any
 
+from agents.chat_memory import force_digest_conversation
 from agents.embeddings import embed_text, embed_texts
 
 from app.db import get_client
@@ -114,6 +115,31 @@ def save_message(
     message = res.data[0]
     message.pop("embedding", None)
     return message
+
+
+def delete_conversation(conversation_id: str) -> dict[str, Any]:
+    """User-requested: deleting a tab first folds whatever hasn't been
+    digested yet into a real knowledge_base record (force_digest_conversation
+    bypasses the normal every-10-messages threshold), so closing a short
+    conversation doesn't just lose it. The digest attempt is real, not
+    swallowed silently — if it genuinely fails (e.g. a Claude/embeddings
+    outage), deletion still proceeds rather than trapping the user with an
+    undeletable tab, but the caller gets an honest `digested: false` back
+    instead of a fabricated success."""
+    digested_record = None
+    try:
+        digested_record = force_digest_conversation(conversation_id)
+    except Exception:
+        pass
+
+    client = get_client()
+    client.table("chat_conversations").delete().eq("id", conversation_id).execute()
+
+    return {
+        "deleted": True,
+        "digested": digested_record is not None,
+        "knowledge_base_id": digested_record["id"] if digested_record else None,
+    }
 
 
 def backfill_missing_message_embeddings() -> int:
