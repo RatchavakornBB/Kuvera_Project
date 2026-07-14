@@ -11,6 +11,7 @@ AGENT.md Section 11's deal_id scope invariant extended to chat.
 from agents.chat_memory import maybe_digest_conversation
 from agents.errors import NodeFailure
 from agents.nodes.orchestrator import classify_intent
+from agents.nodes.stage_update import extract_stage_update
 from agents.nodes.web_research import web_research
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from starlette.concurrency import run_in_threadpool
@@ -18,6 +19,7 @@ from starlette.concurrency import run_in_threadpool
 from app.services import analyze as analyze_service
 from app.services import chat_conversations as chat_conversations_service
 from app.services import concierge as concierge_service
+from app.services import deals as deals_service
 from app.services import documents as documents_service
 
 router = APIRouter(tags=["chat"])
@@ -48,6 +50,11 @@ async def _handle_message(deal_id: str | None, message: str) -> dict:
             "text": f"Analysis complete on {doc['name']}. {preview}… (open the artifact below for the full summary, risk flags, IC memo, and pricing note)",
             "artifact": {"title": f"{doc['name']} — IC memo draft", "type": "Doc", "deal_id": deal_id},
         }
+
+    if route == "update_stage":
+        update = await run_in_threadpool(extract_stage_update, deal_id, message)
+        await run_in_threadpool(deals_service.update_deal_stage, deal_id, update["stage"])
+        return {"role": "assistant", "text": update["confirmation"]}
 
     result = await run_in_threadpool(concierge_service.ask_about_deal, deal_id, message)
     return {"role": "assistant", "text": result["answer"], "sources": result.get("sources", [])}

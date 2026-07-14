@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { StageDiagram } from '../StageDiagram';
-import { buildStageSegments } from '../../lib/dealStage';
+import { STAGE_NAMES, buildStageSegments } from '../../lib/dealStage';
 import { statusColor } from '../../lib/dealStatus';
-import { closeDeal, type ApiDealDetail } from '../../lib/api';
+import { closeDeal, updateDealStage, type ApiDealDetail } from '../../lib/api';
 
 export function DealDetailHeader({ deal }: { deal: ApiDealDetail }) {
   const queryClient = useQueryClient();
@@ -13,6 +13,14 @@ export function DealDetailHeader({ deal }: { deal: ApiDealDetail }) {
     mutationFn: (outcome: 'won' | 'lost') => closeDeal(deal.id, outcome),
     onSuccess: () => {
       setConfirming(false);
+      queryClient.invalidateQueries({ queryKey: ['deal', deal.id] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+
+  const stageMutation = useMutation({
+    mutationFn: (stage: string) => updateDealStage(deal.id, stage),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deal', deal.id] });
       queryClient.invalidateQueries({ queryKey: ['deals'] });
     },
@@ -67,6 +75,18 @@ export function DealDetailHeader({ deal }: { deal: ApiDealDetail }) {
         <div className="text-[11px]" style={{ color: statusColor(deal.status) }}>
           {deal.status}
         </div>
+        <select
+          value={deal.stage}
+          disabled={deal.status === 'Closed' || stageMutation.isPending}
+          onChange={(e) => stageMutation.mutate(e.target.value)}
+          className="cursor-pointer rounded border border-grid bg-transparent px-1.5 py-1 text-[10.5px] text-gray disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {STAGE_NAMES.map((name) => (
+            <option key={name} value={name} className="bg-panel">
+              {name}
+            </option>
+          ))}
+        </select>
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue text-[10px] font-semibold text-terminal-black">
           {deal.owner?.initials ?? '—'}
         </div>
@@ -79,6 +99,9 @@ export function DealDetailHeader({ deal }: { deal: ApiDealDetail }) {
       )}
       {closeMutation.isError && (
         <div className="text-[10.5px] text-red">Failed to close deal: {String(closeMutation.error)}</div>
+      )}
+      {stageMutation.isError && (
+        <div className="text-[10.5px] text-red">Failed to update stage: {String(stageMutation.error)}</div>
       )}
       <StageDiagram segments={buildStageSegments(deal.stage, deal.stage_entered_at)} variant="full" />
     </div>

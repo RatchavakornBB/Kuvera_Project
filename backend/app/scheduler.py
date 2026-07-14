@@ -50,6 +50,22 @@ def run_key_date_check() -> None:
         _log_run("key_date_check", "error", str(e))
 
 
+def run_stalled_deal_check() -> None:
+    """Automation path for deal status (system-architecture.md 3.2's "surfaces
+    stalled deals automatically"). Flags status='Stalled' for deals sitting in
+    the same stage too long — never moves `stage` itself, since stage is a
+    judgment call made via the UI or chat, not a timer (see
+    app.services.deals.flag_stalled_deals)."""
+    try:
+        from app.services import deals as deals_service
+
+        flagged = deals_service.flag_stalled_deals()
+        _log_run("stalled_deal_check", "success", f"{len(flagged)} deal(s) flagged stalled")
+    except Exception as e:
+        logger.exception("stalled_deal_check failed")
+        _log_run("stalled_deal_check", "error", str(e))
+
+
 def run_industry_brief_refresh() -> None:
     from agents.industry_brief import refresh_industry_brief
 
@@ -67,10 +83,16 @@ def start() -> None:
         return
     _scheduler.add_job(run_key_date_check, "interval", minutes=5, id="key_date_check", replace_existing=True)
     _scheduler.add_job(
+        run_stalled_deal_check, "interval", minutes=5, id="stalled_deal_check", replace_existing=True
+    )
+    _scheduler.add_job(
         run_industry_brief_refresh, "interval", hours=24, id="industry_brief_refresh", replace_existing=True
     )
     _scheduler.start()
-    logger.info("Scheduler started: key_date_check every 5min, industry_brief_refresh every 24h")
+    logger.info(
+        "Scheduler started: key_date_check every 5min, stalled_deal_check every 5min, "
+        "industry_brief_refresh every 24h"
+    )
 
 
 def shutdown() -> None:

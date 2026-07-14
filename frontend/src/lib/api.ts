@@ -614,6 +614,19 @@ export async function createTask(
   return res.json();
 }
 
+export async function updateDealStage(dealId: string, stage: string): Promise<ApiDeal> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/stage`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stage }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(`PATCH /deals/${dealId}/stage failed: ${res.status} ${body ? JSON.stringify(body.detail) : ''}`);
+  }
+  return res.json();
+}
+
 export async function updateTask(
   dealId: string,
   taskId: string,

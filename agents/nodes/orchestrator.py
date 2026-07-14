@@ -1,7 +1,8 @@
 """Orchestrator — system-architecture.md Section 4.4. Minimal
 conditional-edge router this week (Section 4.3): the routing decision
 itself is an LLM call, choosing between Concierge Q&A, the Analyst Lead
-subgraph, and web research (Section 5.2/5.3). The full hybrid
+subgraph, web research (Section 5.2/5.3), and chat-driven stage updates
+(agents/nodes/stage_update.py). The full hybrid
 hard-route/LLM-route split from Section 5 is design-only for this build —
 every chat message goes through this one classifier; only the EDGAR
 decision *within* web_research is itself hard-routed (see
@@ -23,7 +24,7 @@ ROUTE_TOOL = {
         "properties": {
             "route": {
                 "type": "string",
-                "enum": ["concierge_qa", "analyst_lead", "web_research"],
+                "enum": ["concierge_qa", "analyst_lead", "web_research", "update_stage"],
                 "description": (
                     "'analyst_lead' only if the user is explicitly asking to run or "
                     "re-run document analysis (e.g. 'analyze the latest document', "
@@ -33,6 +34,10 @@ ROUTE_TOOL = {
                     "external/web information rather than this deal's own records "
                     "(e.g. 'what's a comparable company trading at', 'look up their "
                     "10-K', 'any recent news on X'). "
+                    "'update_stage' only if the user is explicitly asking to move/advance/"
+                    "change this deal's pipeline stage (e.g. 'move this deal to Due "
+                    "Diligence', 'we signed the NDA, advance the stage', 'push to the next "
+                    "stage') — not for questions merely asking what the current stage is. "
                     "'concierge_qa' for everything else — status questions, 'what's "
                     "the risk on X', general questions about THIS deal's own data."
                 ),
@@ -47,7 +52,7 @@ CLASSIFY_PROMPT = (
     "MESSAGE: {message}"
 )
 
-VALID_ROUTES = ("concierge_qa", "analyst_lead", "web_research")
+VALID_ROUTES = ("concierge_qa", "analyst_lead", "web_research", "update_stage")
 
 
 def _run_once(message: str) -> str:

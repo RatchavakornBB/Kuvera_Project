@@ -31,6 +31,10 @@ class CloseDealRequest(BaseModel):
     outcome: str
 
 
+class StageUpdate(BaseModel):
+    stage: str
+
+
 class ResolveContradiction(BaseModel):
     resolution: str
     note: str = ""
@@ -72,6 +76,15 @@ def update_task(deal_id: str, task_id: str, body: TaskUpdate):
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
+
+
+@router.patch("/{deal_id}/stage")
+def update_deal_stage(deal_id: str, body: StageUpdate):
+    if deals_service.get_deal(deal_id) is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    if body.stage not in deals_service.STAGES:
+        raise HTTPException(status_code=400, detail=f"stage must be one of {deals_service.STAGES}")
+    return deals_service.update_deal_stage(deal_id, body.stage)
 
 
 @router.post("/{deal_id}/close")

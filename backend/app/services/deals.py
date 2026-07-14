@@ -1,6 +1,7 @@
 """The one write/read path for the deals resource — routes call these
 functions, never the supabase client directly."""
 
+from datetime import datetime, timezone
 from typing import Any
 
 from agents.knowledge import promote_deal_to_knowledge
@@ -8,6 +9,16 @@ from agents.knowledge import promote_deal_to_knowledge
 from app.db import get_client
 
 _DEAL_SELECT = "*, owner:users(id, full_name, initials)"
+
+STAGES = (
+    "Lead",
+    "NDA",
+    "Sourcing & Screening",
+    "Valuation & Bidding",
+    "Strategy & Preparation",
+    "Due Diligence",
+    "Negotiation & Closing",
+)
 
 
 def _doc_pending_count(deal_id: str) -> int:
@@ -80,6 +91,23 @@ def create_deal(name: str, client_name: str, industries: list[str], owner_id: st
     return res.data[0]
 
 
+def update_deal_stage(deal_id: str, stage: str) -> dict[str, Any] | None:
+    """The single write path for stage changes — used by the manual UI
+    control, the chat agent's stage_update tool, and (for the 'Stalled'
+    status only, never 'stage' itself) the scheduler's stalled-deal check.
+    Resets stage_entered_at and clears a stale 'Stalled' status, since
+    moving stages is itself evidence the deal isn't stalled anymore."""
+    if stage not in STAGES:
+        raise ValueError(f"Invalid stage: {stage!r}")
+    client = get_client()
+    fields: dict[str, Any] = {"stage": stage, "stage_entered_at": datetime.now(timezone.utc).isoformat()}
+    deal = client.table("deals").select("status").eq("id", deal_id).execute().data
+    if deal and deal[0]["status"] == "Stalled":
+        fields["status"] = "On track"
+    res = client.table("deals").update(fields).eq("id", deal_id).execute()
+    return res.data[0] if res.data else None
+
+
 def create_task(deal_id: str, text: str, owner_id: str | None, due_date: str | None) -> dict[str, Any]:
     client = get_client()
     res = (
@@ -104,6 +132,30 @@ def close_deal(deal_id: str, outcome: str) -> dict[str, Any]:
     client.table("deals").update({"status": "Closed"}).eq("id", deal_id).execute()
     records = promote_deal_to_knowledge(deal_id, outcome)
     return {"deal_id": deal_id, "outcome": outcome, "knowledge_records_created": len(records)}
+
+
+def flag_stalled_deals(stalled_after_days: int = 14) -> list[dict[str, Any]]:
+    """Scheduler-only: flags status='Stalled' for open deals that have sat
+    in the same stage too long. Never touches `stage` itself — advancing
+    a deal is a judgment call for a person or an explicit chat instruction,
+    not something a timer should decide (system-architecture.md 3.2's
+    "surfaces stalled deals automatically" is a flag, not an auto-advance)."""
+    client = get_client()
+    cutoff = datetime.now(timezone.utc).timestamp() - stalled_after_days * 86400
+    cutoff_iso = datetime.fromtimestamp(cutoff, tz=timezone.utc).isoformat()
+
+    candidates = (
+        client.table("deals")
+        .select("id, name, stage, stage_entered_at, status")
+        .neq("status", "Closed")
+        .neq("status", "Stalled")
+        .lt("stage_entered_at", cutoff_iso)
+        .execute()
+        .data
+    )
+    for deal in candidates:
+        client.table("deals").update({"status": "Stalled"}).eq("id", deal["id"]).execute()
+    return candidates
 
 
 def get_deal(deal_id: str) -> dict[str, Any] | None:
