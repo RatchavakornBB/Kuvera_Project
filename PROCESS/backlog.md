@@ -289,3 +289,23 @@ now includes it, and a real Concierge Q&A round-trip correctly
 referenced the document while honestly declining to state details
 beyond its 200-char preview (a pre-existing, deal-context-wide cap
 applying to every document type) rather than fabricating an answer.
+
+phase7-008-episodic-chat-memory — user asked for 4 things: real
+persistent chat memory, RAG over it, a Knowledge route to summarize
+it, and multiple conversation tabs per deal. Confirmed via a
+dedicated research pass first that chat had zero DB backing at all
+before this. Built chat_conversations/chat_messages (every message
+embedded immediately per user's choice), search_chat_history() wired
+into concierge_qa for real recall, maybe_digest_conversation() firing
+a real Claude synthesis call every 10 new messages into a new
+knowledge_base 'chat_insights' category, and a real multi-tab UI in
+ChatPage.tsx. Found and fixed 2 real bugs via live testing: Claude's
+digest tool_use omitting the required 'topic' field (fallback added),
+and real-time per-message embedding hitting Voyage's rate limit
+(7/10 failed) — fixed with a batched backfill mirroring documents.py's
+existing fix for the same problem. Verified live: a real 5-turn
+WebSocket test proved conversation continuity and genuine RAG recall
+(a "summarize what we discussed" answer referenced real prior
+content), the digest produced a real richly-detailed knowledge_base
+row, and a real browser test confirmed tab creation/auto-titling/
+switching correctly reloads real persisted history per tab.

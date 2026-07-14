@@ -1,21 +1,33 @@
 ## Current
 Phase 6 (post-5-day-plan extension) is fully complete (see prior entries below). Phase 7 is
-underway: phase7-001 rebuilt Chat as a real dedicated page, phase7-002 added real .docx document
-support, phase7-003 fixed a real live hang, phase7-004 fixed the chat artifact "Open" button +
-preview truncation (now FULLY verified, see below), phase7-005 added a real per-deal document list
-to the Chat Sources panel, phase7-006 added real NotebookLM-style "add a link" URL sources,
-phase7-007 made link sources actually readable by Concierge Q&A (auto-summarize on add). User
-topped up Anthropic API credits mid-session (2026-07-14) — everything is now unblocked and fully
-live-verified.
+underway: phase7-001 through phase7-007 rebuilt/fixed Chat (dedicated page, .docx support, request
+timeout, artifact Open button, Sources document list, add-link sources, link auto-summarize — all
+complete, see below). phase7-008 added real episodic chat memory: persistent conversations, RAG
+recall into Concierge, auto-digest into Knowledge Base, and multi-tab chat per deal. Everything is
+live-verified against the real Anthropic API (credits restored 2026-07-14).
 Active task: none
 Status: idle
-Last checkpoint commit: fbca3aa
-Blocked on: nothing — Anthropic API credits were restored by the user and both phase7-004's and
-phase7-007's live verifications were re-run successfully against the real API.
+Last checkpoint commit: f83e289
+Blocked on: nothing.
 
 ## Next up
 Nothing queued. If the user wants further work, check PROCESS/backlog.md's Done section for full
 history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+phase7-008 built real episodic chat memory (user asked for 4 things: persistent memory, RAG,
+Knowledge auto-summarize, multi-tab). New chat_conversations/chat_messages tables — chat was
+previously pure in-memory React state with zero DB backing (confirmed via a dedicated research
+pass before building). Every message embedded immediately (Voyage AI); agents/chat_memory.py::
+search_chat_history() does real pgvector search wired into concierge_qa, so Concierge genuinely
+recalls past exchanges now (verified: a real "summarize what we discussed" answer referenced
+actual prior conversation content). maybe_digest_conversation() fires a real Claude synthesis call
+every 10 new messages, writing a knowledge_base row under a new 'chat_insights' category.
+ChatPage.tsx has a real tab strip per deal, auto-titled from each conversation's first message.
+Found and fixed 2 real bugs during live testing: (1) Claude's report_chat_digest tool_use omitted
+the required 'topic' field entirely — fixed with a fallback, mirrors the earlier clause_extractor
+tool-use-conformance lesson but a different failure shape (missing field vs wrong-typed field);
+(2) real-time per-message embedding hit Voyage's rate limit (7/10 messages failed) — fixed with
+backfill_missing_message_embeddings() + POST /conversations/backfill-embeddings, mirroring
+documents.py's existing fix for the identical problem.
 phase7-007 fixed a real gap found while answering the user's "will the Agent be able to read a
 link source" question: agents/deal_context.py::build_deal_context() (what Concierge Q&A actually
 reads) only ever surfaces a document's `summary` field, never raw bytes — a freshly-added link had
@@ -121,11 +133,13 @@ has a real status trail, not just the 4 Analyst Lead nodes.
 - Local Supabase: ports 55321 (API)/55322 (DB)/55323 (Studio)/55324 (Inbucket)/55327 (Analytics) — NOT 54321 default (D-004). Wait for `(healthy)` after any `db reset` before hitting Storage.
 - `.env`: real ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_KEY, DATABASE_URL, VOYAGER_API_KEY (sic —
   not VOYAGE_API_KEY, matches what agents/config.py actually reads). Never print/log/commit.
-- Schema: 16 tables (8 core + `analyses` + `documents.clauses` + `agent_configs` +
+- Schema: 18 tables (8 core + `analyses` + `documents.clauses` + `agent_configs` +
   `pending_changes` + `audit_log` + `knowledge_base` + `contradictions` + `learning_digests` +
-  `agent_invocations` + `scheduled_run_log`; Drafting Lead reuses `documents`, no new table).
-  `documents` also has `embedding` (phase6-008) and `source_url` (phase7-006, NULL except for
-  link-derived documents). New `public` tables need
+  `agent_invocations` + `scheduled_run_log` + `chat_conversations` + `chat_messages`; Drafting Lead
+  reuses `documents`, no new table). `documents` also has `embedding` (phase6-008) and
+  `source_url` (phase7-006, NULL except for link-derived documents). `knowledge_base.category`
+  gained `chat_insights` (phase7-008, real Claude-synthesized digests of chat history). New
+  `public` tables need
   `GRANT ... TO service_role` (D-005). Apply new migrations with `supabase migration up`, never
   `db reset`, once real accumulated test/demo data exists (a reset wipes it).
 - `agents/contradictions.py`: real pgvector-matched corroboration (threshold 0.70, calibrated
@@ -148,7 +162,10 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   `/deals/{id}/contradictions` (+ `/{id}/resolve`), `/admin/learning` (`/run`, `/digests`),
   `/admin/pending-approvals/{id}/run-eval`, `/admin/scheduler/status` + `/runs`,
   `/agent-hub/grid` + `/agents/{name}` + `/graph/analyst-lead`,
-  `/deals/{id}/draft/{memo,deck,email,summary}`, `/documents/{id}/download`.
+  `/deals/{id}/draft/{memo,deck,email,summary}`, `/documents/{id}/download`,
+  `/documents/backfill-embeddings`, `/deals/{id}/documents/from-url`,
+  `/deals/{id}/conversations` (GET+POST) + `/conversations/{id}/messages` +
+  `/conversations/backfill-embeddings`.
   `sys.path` self-bootstraps (D-009). Verified: mixing Claude's `web_search` server tool with a
   custom structured-output tool in one call works (agents/learning_agent.py) — untested before
   phase6-003, don't assume it doesn't work if reconsidering agents/industry_brief.py's
@@ -171,7 +188,17 @@ has a real status trail, not just the 4 Analyst Lead nodes.
   `promote_deal_to_knowledge()` (real Claude synthesis + real Voyage embeddings, called from
   `POST /deals/{id}/close`) and `search_knowledge()` / `historical_precedent_context()` (real
   pgvector cosine search, the latter used inside risk_flagger/pricing_advisor, best-effort/
-  swallows its own failures since it's supplementary context).
+  swallows its own failures since it's supplementary context). `agents/chat_memory.py` (phase7-008)
+  is the episodic chat memory layer: `search_chat_history()`/`chat_history_context()` (real
+  pgvector search over `chat_messages`, wired into `concierge_qa`) and
+  `maybe_digest_conversation()` (fires a real Claude call every `DIGEST_TRIGGER_MESSAGE_COUNT`=10
+  new messages, writes a `knowledge_base` row under `category='chat_insights'`). Its digest tool
+  schema has a real, observed quirk: Claude sometimes omits the required `topic` field entirely —
+  `_run_digest()` falls back to the conversation's title, don't remove that fallback.
+  `backend/app/services/chat_conversations.py::backfill_missing_message_embeddings()` exists
+  because real-time per-message embedding is genuinely rate-limit-prone (unlike documents.py's
+  batchable case) — call it via `POST /conversations/backfill-embeddings` if chat RAG search seems
+  to be missing recent messages.
 - `agents/evals.py`: real eval cases only exist for pricing_advisor, ic_memo_drafter, risk_flagger
   — `run_eval()` returns `pass_rate: None` honestly for any other agent rather than faking a score.
   Grading is a real second Claude call (`_grade()`), not a keyword/string match — don't replace it
