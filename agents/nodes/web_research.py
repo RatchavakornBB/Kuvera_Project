@@ -2,6 +2,11 @@
 Claude's official web_search server tool (not a custom scraper; citations
 parsed from the real citations array) with a hard-routed SEC EDGAR lookup.
 
+Also passes the web_fetch server tool (same pairing as
+agents/industry_brief.py's _synthesize) so the model can pull the full
+content of a page a search turned up, not just the search-result snippet —
+web_fetch is still beta-only in the installed SDK, hence `betas=WEB_FETCH_BETAS`.
+
 EDGAR routing is a plain Python conditional, not an LLM decision (Section
 5.3: "implemented as a plain conditional in the Analyst Lead's
 tool-selection step, not a call through the Orchestrator's LLM router") —
@@ -20,6 +25,8 @@ EDGAR_TRIGGER_RE = re.compile(
 )
 
 WEB_SEARCH_TOOL = {"type": "web_search_20250305", "name": "web_search", "max_uses": 3}
+WEB_FETCH_TOOL = {"type": "web_fetch_20250910", "name": "web_fetch", "max_uses": 3}
+WEB_FETCH_BETAS = ["web-fetch-2025-09-10"]
 
 RESEARCH_PROMPT = (
     "You are the Analyst Lead's research assistant. Answer the question below using web "
@@ -70,7 +77,8 @@ def _run_once(question: str) -> dict:
     response = call_model(
         "orchestrator",
         messages=[{"role": "user", "content": RESEARCH_PROMPT.format(question=question, edgar_context=edgar_context)}],
-        tools=[WEB_SEARCH_TOOL],
+        tools=[WEB_SEARCH_TOOL, WEB_FETCH_TOOL],
+        betas=WEB_FETCH_BETAS,
         max_tokens=1536,
     )
 

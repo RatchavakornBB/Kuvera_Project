@@ -67,6 +67,7 @@ def call_model(
     tools: list[dict] | None = None,
     system: str | None = None,
     max_tokens: int = 4096,
+    betas: list[str] | None = None,
 ) -> anthropic.types.Message:
     """Dispatches a chat completion for `agent_name` to that agent's
     configured model_id. Returns the provider's native response object —
@@ -77,7 +78,11 @@ def call_model(
     through the Admin & Skill Governance approval loop) on every call —
     deliberately not cached across the process lifetime, so an approved
     change is live on the very next call, not after a restart. Falls back
-    to the static AGENT_MODELS default only if no DB row exists yet."""
+    to the static AGENT_MODELS default only if no DB row exists yet.
+
+    `betas` opts into Anthropic beta-only server tools (e.g. `web_fetch`,
+    still beta as of this build) by routing through `client.beta.messages`
+    instead of the standard endpoint — omit it for every other call."""
 
     config = get_agent_config(agent_name)
     model_id = config["model_id"] if config else AGENT_MODELS.get(agent_name, DEFAULT_MODEL)
@@ -92,11 +97,20 @@ def call_model(
         client = _anthropic_client()
         kwargs: dict = {"model": model_id, "max_tokens": max_tokens, "messages": messages}
         if effective_system:
-            kwargs["system"] = effective_system
+            # A cache breakpoint on the system prompt only pays off for content
+            # that's actually stable call-to-call (skill_content, an Industry
+            # Brief) — every existing caller already meets that bar, since none
+            # vary `system` per-request today.
+            kwargs["system"] = [
+                {"type": "text", "text": effective_system, "cache_control": {"type": "ephemeral"}}
+            ]
         if tools:
             kwargs["tools"] = tools
         try:
-            response = client.messages.create(**kwargs)
+            if betas:
+                response = client.beta.messages.create(betas=betas, **kwargs)
+            else:
+                response = client.messages.create(**kwargs)
         except Exception as e:
             finish_invocation(invocation_id, "error", str(e))
             raise

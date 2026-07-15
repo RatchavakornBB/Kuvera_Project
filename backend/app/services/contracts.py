@@ -15,8 +15,14 @@ def process_contract(deal_id: str, filename: str, content: bytes, content_type: 
     doc = documents_service.upload_document(
         deal_id=deal_id, filename=filename, content=content, content_type=content_type
     )
-    document_id = doc["id"]
+    return reanalyze_contract(doc["id"])
 
+
+def reanalyze_contract(document_id: str) -> dict[str, Any]:
+    """Re-runs 4.1/4.2 on an already-uploaded contract document — same pair
+    process_contract runs on ingest, factored out so a chat-driven
+    'contracts_lead' request (agents/nodes/orchestrator.py) can re-analyze
+    an existing document without re-uploading it."""
     summary = contract_summarizer(document_id)
     clauses = clause_extractor(document_id)
 

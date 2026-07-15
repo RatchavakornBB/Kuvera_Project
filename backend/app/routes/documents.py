@@ -1,4 +1,5 @@
 import mimetypes
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import Response
@@ -60,8 +61,16 @@ def download_document(document_id: str):
         raise HTTPException(status_code=404, detail="Document not found or has no stored file")
     content, filename = result
     content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    # Content-Disposition's plain filename= param is Latin-1 only (HTTP header
+    # values are) — a Thai/Unicode filename (e.g. from a fetched page's <title>)
+    # raises a real UnicodeEncodeError there, not a fabricated edge case. The
+    # RFC 6266 fix: an ASCII-safe fallback plus a UTF-8 percent-encoded
+    # filename* that real browsers prefer and display correctly.
+    ascii_fallback = filename.encode("ascii", "replace").decode("ascii")
     return Response(
         content=content,
         media_type=content_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(filename)}"
+        },
     )

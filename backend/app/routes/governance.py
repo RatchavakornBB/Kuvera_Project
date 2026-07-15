@@ -11,9 +11,35 @@ class ProposeChange(BaseModel):
     new_value: str
 
 
+class CreateAgent(BaseModel):
+    agent_name: str
+    model_id: str
+    skill_content: str = ""
+
+
+class AddSkill(BaseModel):
+    instruction: str
+
+
 @router.get("/agents")
 def list_agents():
     return governance_service.list_agents()
+
+
+@router.post("/agents")
+def create_agent(body: CreateAgent):
+    try:
+        return governance_service.create_agent(body.agent_name, body.model_id, body.skill_content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.post("/agents/{agent_name}/add-skill")
+def add_skill(agent_name: str, body: AddSkill):
+    try:
+        return governance_service.propose_skill_addition(agent_name, body.instruction)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/agents/{agent_name}/propose")

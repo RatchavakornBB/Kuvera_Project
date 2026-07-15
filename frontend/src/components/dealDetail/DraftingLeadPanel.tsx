@@ -19,11 +19,17 @@ export function DraftingLeadPanel({ dealId }: { dealId: string }) {
   const deckMutation = useMutation({ mutationFn: () => draftDeck(dealId), onSuccess: invalidate });
   const emailMutation = useMutation({
     mutationFn: () => draftEmail(dealId),
-    onSuccess: (res) => setEmailText(res.email),
+    onSuccess: (res) => {
+      setEmailText(res.email);
+      invalidate();
+    },
   });
   const summaryMutation = useMutation({
     mutationFn: () => draftSourceCitedSummary(dealId),
-    onSuccess: (res) => setSummaryText(res.summary),
+    onSuccess: (res) => {
+      setSummaryText(res.summary);
+      invalidate();
+    },
   });
 
   return (

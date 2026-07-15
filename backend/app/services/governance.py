@@ -18,6 +18,50 @@ def list_agents() -> list[dict[str, Any]]:
     return client.table("agent_configs").select("*").order("agent_name").execute().data
 
 
+def create_agent(agent_name: str, model_id: str, skill_content: str = "") -> dict[str, Any]:
+    """Provisions a brand-new agent_configs row — the row call_model() looks up by
+    agent_name once real node code for that agent starts calling it. Not itself a
+    governed change (nothing existing behavior to diff against), so it writes
+    directly rather than going through pending_changes; a subsequent skill edit on
+    this new row goes through the normal propose/approve flow like any other agent."""
+    agent_name = agent_name.strip()
+    if not agent_name:
+        raise ValueError("agent_name is required")
+    if not model_id.strip():
+        raise ValueError("model_id is required")
+
+    client = get_client()
+    existing = client.table("agent_configs").select("id").eq("agent_name", agent_name).execute().data
+    if existing:
+        raise ValueError(f"Agent {agent_name!r} already exists")
+
+    res = (
+        client.table("agent_configs")
+        .insert({"agent_name": agent_name, "model_id": model_id, "skill_content": skill_content})
+        .execute()
+    )
+    return res.data[0]
+
+
+def propose_skill_addition(agent_name: str, additional_instruction: str) -> dict[str, Any]:
+    """Appends `additional_instruction` to `agent_name`'s current skill_content and files it
+    through the same propose_change queue as any other edit — the human-facing "pick an agent,
+    add one instruction" counterpart to agents/agent_config.py's function of the same name
+    that Learning Agent uses for its own proposals (duplicated per D-007: agents/ stays
+    independent of backend/)."""
+    if not additional_instruction.strip():
+        raise ValueError("additional_instruction is required")
+
+    client = get_client()
+    config_rows = client.table("agent_configs").select("*").eq("agent_name", agent_name).execute().data
+    if not config_rows:
+        raise ValueError(f"Unknown agent: {agent_name!r}")
+
+    old_value = config_rows[0]["skill_content"] or ""
+    new_value = f"{old_value}\n{additional_instruction}".strip() if old_value else additional_instruction.strip()
+    return propose_change(agent_name, "skill_content", new_value)
+
+
 def propose_change(agent_name: str, change_type: str, new_value: str) -> dict[str, Any]:
     if change_type not in VALID_CHANGE_TYPES:
         raise ValueError(f"Invalid change_type: {change_type!r}")

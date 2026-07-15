@@ -5,6 +5,7 @@ upload succeeds, the storage object is removed rather than left orphaned.
 """
 
 import re
+import threading
 import uuid
 from typing import Any
 
@@ -13,7 +14,7 @@ from psycopg.rows import dict_row
 
 from agents.config import settings
 from agents.embeddings import embed_text, embed_texts
-from agents.web_source import fetch_url_as_text
+from agents.web_source import fetch_url_content
 
 from app.db import get_client
 
@@ -41,11 +42,26 @@ def _embed_document_text(text: str) -> list[float] | None:
         return None
 
 
+def _storage_safe_filename(filename: str) -> str:
+    """Supabase Storage rejects non-ASCII object keys (a real 400 InvalidKey
+    from the storage API, not an SSRF/permissions issue) — filenames derived
+    from a page <title> (create_document_from_url) or a chat question
+    (create_document_from_research) can be Thai/any-Unicode text, so the
+    storage key needs its own ASCII-safe slug. The human-readable `name`
+    column stores the original filename unchanged; only the storage key is
+    transliterated here."""
+    base, dot, ext = filename.rpartition(".")
+    base = base if dot else filename
+    ext = f".{ext}" if dot else ""
+    safe_base = re.sub(r"\s+", " ", base.encode("ascii", "ignore").decode("ascii")).strip(" -_")
+    return f"{safe_base or 'file'}{ext}"
+
+
 def upload_document(
     deal_id: str, filename: str, content: bytes, content_type: str, source_url: str | None = None
 ) -> dict[str, Any]:
     client = get_client()
-    storage_path = f"{deal_id}/{uuid.uuid4()}-{filename}"
+    storage_path = f"{deal_id}/{uuid.uuid4()}-{_storage_safe_filename(filename)}"
 
     client.storage.from_(BUCKET).upload(
         storage_path, content, {"content-type": content_type}
@@ -77,13 +93,22 @@ def upload_document(
 
 
 def create_document_from_url(deal_id: str, url: str) -> dict[str, Any]:
-    """NotebookLM-style "add a link" source — fetches the real page content
+    """NotebookLM-style "add a link" source — fetches the real content
     server-side (agents/web_source.py, includes SSRF protection) and stores
     it through the exact same real write path as a file upload, just with
-    source_url set for provenance. The extracted text is stored as a real
-    .txt document, which agents/documents.py::build_content_block() already
-    knows how to feed to Claude — link sources are just as analyzable as an
-    uploaded file, not a lesser citation-only stub.
+    source_url set for provenance.
+
+    Two real shapes, per agents/web_source.py::fetch_url_content:
+    - A webpage: extracted readable text, stored as a real .txt document.
+    - A URL pointing directly at a PDF/.docx/image: the real file bytes,
+      stored exactly like an uploaded file — a link to a PDF is just as
+      analyzable as an uploaded PDF, not downgraded to a citation stub
+      because it arrived via URL instead of a file picker.
+
+    Either way, agents/documents.py::build_content_block() already knows
+    how to feed the result to Claude, so the same doc_summarizer call
+    below works unmodified regardless of which branch produced the
+    document.
 
     Also runs a real doc_summarizer call immediately (just that one node,
     not the full Analyst Lead pipeline — risk-flagging/IC-memo/pricing
@@ -96,20 +121,131 @@ def create_document_from_url(deal_id: str, url: str) -> dict[str, Any]:
     summarization failure here does not fail the whole add-link action,
     since the document itself was already created successfully — it just
     leaves `summary` null, same as any document nobody has analyzed yet."""
-    title, text = fetch_url_as_text(url)
-    safe_title = re.sub(r"[^\w\s.-]", "", title).strip()[:80] or "web-source"
-    filename = f"{safe_title}.txt"
-    doc = upload_document(deal_id, filename, text.encode("utf-8"), "text/plain", source_url=url)
+    result = fetch_url_content(url)
+    if result["kind"] == "text":
+        safe_title = re.sub(r"[^\w\s.-]", "", result["title"]).strip()[:80] or "web-source"
+        filename = f"{safe_title}.txt"
+        doc = upload_document(deal_id, filename, result["text"].encode("utf-8"), "text/plain", source_url=url)
+    else:
+        doc = upload_document(deal_id, result["filename"], result["content"], result["content_type"], source_url=url)
 
     try:
         from agents.nodes.doc_summarizer import doc_summarizer
 
-        result = doc_summarizer({"document_id": doc["id"]})
-        update_document_summary(doc["id"], {"summary": result["summary"]})
-        doc["summary"] = result["summary"]
+        summary_result = doc_summarizer({"document_id": doc["id"]})
+        update_document_summary(doc["id"], {"summary": summary_result["summary"]})
+        doc["summary"] = summary_result["summary"]
     except Exception:
         pass
 
+    return doc
+
+
+def _refresh_document_from_url(doc_id: str, storage_path: str, url: str) -> None:
+    """Re-fetches url and overwrites the existing document's stored bytes
+    and summary in place — storage3's update() is a PUT that overwrites,
+    unlike upload()'s POST which fails if the key already exists. For a
+    source whose content changes over time (a live stock-price page, a
+    developing news story), this keeps the saved citation's own content
+    current instead of calcifying at whatever it was on first fetch, while
+    web_research's web_search/web_fetch calls that produced the chat answer
+    were already fresh regardless — this only refreshes the stored copy."""
+    result = fetch_url_content(url)
+    if result["kind"] == "text":
+        content, content_type = result["text"].encode("utf-8"), "text/plain"
+    else:
+        content, content_type = result["content"], result["content_type"]
+
+    client = get_client()
+    client.storage.from_(BUCKET).update(storage_path, content, {"content-type": content_type})
+
+    from agents.nodes.doc_summarizer import doc_summarizer
+
+    summary_result = doc_summarizer({"document_id": doc_id})
+    update_document_summary(doc_id, {"summary": summary_result["summary"]})
+
+
+def _save_new_citation_links(deal_id: str, urls: list[str]) -> None:
+    """Fetches each cited URL as its own real Link document (same path as a
+    manual "Add link"), so a chat research answer leaves behind the actual
+    underlying sources — independently downloadable/re-analyzable — not
+    just a list of URLs sitting inside one synthesized note.
+
+    Matched against source_urls already saved for this deal: a URL cited
+    again gets its existing document's content refreshed in place
+    (_refresh_document_from_url) rather than skipped or duplicated, since
+    the same popular article gets re-cited across multiple research
+    questions and its content may have changed since it was first saved.
+
+    Best-effort per URL: one citation failing to fetch/refresh (paywall,
+    bot-block like investing.com's 403, a since-dead link) must not fail
+    the research note itself, which is already the primary, reliable
+    artifact."""
+    if not urls:
+        return
+    client = get_client()
+    existing = (
+        client.table("documents")
+        .select("id, source_url, storage_path")
+        .eq("deal_id", deal_id)
+        .not_.is_("source_url", "null")
+        .execute()
+        .data
+    )
+    existing_by_url = {row["source_url"]: row for row in existing}
+    seen: set[str] = set()
+    for url in urls:
+        if url in seen:
+            continue
+        seen.add(url)
+        try:
+            if url in existing_by_url:
+                row = existing_by_url[url]
+                _refresh_document_from_url(row["id"], row["storage_path"], url)
+            else:
+                create_document_from_url(deal_id, url)
+        except Exception:
+            pass
+
+
+def create_document_from_research(
+    deal_id: str, question: str, answer: str, citations: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Persists a chat web_research answer as a real, RAG-searchable
+    Document — previously this was pure chat-transcript ephemera (see
+    agents/nodes/web_research.py's own docstring: it returns {answer,
+    citations} and writes nothing itself). Reuses the same upload_document
+    write path as every other document type and embeds on name+summary
+    like update_document_summary does for everything else, so a research
+    answer surfaces in Documents search and Concierge Q&A's deal_context
+    exactly like an uploaded file or an added link — not a second-class
+    citation-only stub. Also saves each individual citation as its own Link
+    document via _save_new_citation_links, so the sources aren't just a URL
+    list inside this note — fired on a background thread (not awaited) since
+    it can fetch+summarize several citation URLs one at a time, and this
+    function is called synchronously from the chat websocket handler while
+    the user is waiting on the answer that already arrived; the citation
+    links appearing a few seconds later beats making the whole chat turn
+    stall on them (real observed symptom: a from-chat question hung the
+    websocket for the entire fetch+summarize loop before this fix)."""
+    safe_title = re.sub(r"[^\w\s.-]", "", question).strip()[:80] or "web-research"
+    filename = f"{safe_title}.txt"
+
+    lines = [f"QUESTION: {question}", "", "ANSWER:", answer]
+    urls = [c["url"] for c in citations if c.get("url")]
+    if urls:
+        lines += ["", "SOURCES:"] + [f"- {u}" for u in urls]
+    content = "\n".join(lines)
+
+    # Only set source_url (a single-URL provenance field) when there's
+    # exactly one citation — multiple sources are listed in the body
+    # instead of picking one arbitrarily to elevate.
+    source_url = urls[0] if len(urls) == 1 else None
+    doc = upload_document(deal_id, filename, content.encode("utf-8"), "text/plain", source_url=source_url)
+    update_document_summary(doc["id"], {"summary": answer[:2000], "type": "Research"})
+    threading.Thread(target=_save_new_citation_links, args=(deal_id, urls), daemon=True).start()
+    doc["summary"] = answer[:2000]
+    doc["type"] = "Research"
     return doc
 
 
@@ -238,16 +374,12 @@ def download_document(document_id: str) -> tuple[bytes, str] | None:
     return content, doc["name"]
 
 
-def get_latest_document(deal_id: str) -> dict[str, Any] | None:
+def get_latest_document(deal_id: str, doc_type: str | None = None) -> dict[str, Any] | None:
     client = get_client()
-    res = (
-        client.table("documents")
-        .select(DOCUMENT_COLUMNS)
-        .eq("deal_id", deal_id)
-        .order("uploaded_at", desc=True)
-        .limit(1)
-        .execute()
-    )
+    query = client.table("documents").select(DOCUMENT_COLUMNS).eq("deal_id", deal_id)
+    if doc_type:
+        query = query.eq("type", doc_type)
+    res = query.order("uploaded_at", desc=True).limit(1).execute()
     return res.data[0] if res.data else None
 
 

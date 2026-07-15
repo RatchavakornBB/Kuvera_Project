@@ -21,6 +21,7 @@ from pptx.util import Inches, Pt as PptxPt
 from agents.adapters.model_adapter import call_model
 from agents.analyses import get_last_analysis
 from agents.db import get_client
+from agents.embeddings import embed_text
 from agents.retry import with_retry
 
 BUCKET = "deal-documents"
@@ -171,7 +172,21 @@ def draft_notebooklm_summary(deal_id: str) -> str:
     return "\n".join(lines)
 
 
-def _upload_and_record(deal_id: str, filename: str, content: bytes, content_type: str, doc_type: str) -> dict[str, Any]:
+def _embed_best_effort(text: str) -> list[float] | None:
+    """Same best-effort contract as backend/app/services/documents.py's
+    _embed_document_text — an embeddings-provider failure must never break
+    a draft action, since the file itself already generated successfully."""
+    if not text.strip():
+        return None
+    try:
+        return embed_text(text, input_type="document")
+    except Exception:
+        return None
+
+
+def _upload_and_record(
+    deal_id: str, filename: str, content: bytes, content_type: str, doc_type: str, embed_source: str = ""
+) -> dict[str, Any]:
     import uuid
 
     client = get_client()
@@ -188,6 +203,7 @@ def _upload_and_record(deal_id: str, filename: str, content: bytes, content_type
                     "type": doc_type,
                     "storage_path": storage_path,
                     "status": "approved",
+                    "embedding": _embed_best_effort(f"{filename}\n{embed_source}"),
                 }
             )
             .execute()
@@ -195,20 +211,64 @@ def _upload_and_record(deal_id: str, filename: str, content: bytes, content_type
     except Exception:
         client.storage.from_(BUCKET).remove([storage_path])
         raise
-    return res.data[0]
+    doc = res.data[0]
+    doc.pop("embedding", None)
+    return doc
 
 
 def draft_and_store_ic_memo(deal_id: str) -> dict[str, Any]:
     content, deal = draft_ic_memo_docx(deal_id)
+    analysis = get_last_analysis(deal_id)
     filename = f"{deal['name'].replace(' ', '_')}_IC_Memo.docx"
+    embed_source = analysis.get("ic_memo_draft") or analysis.get("summary") or ""
     return _upload_and_record(
-        deal_id, filename, content, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Drafted Memo"
+        deal_id,
+        filename,
+        content,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Drafted Memo",
+        embed_source,
     )
 
 
 def draft_and_store_ic_deck(deal_id: str) -> dict[str, Any]:
     content, deal = draft_ic_deck_pptx(deal_id)
+    analysis = get_last_analysis(deal_id)
     filename = f"{deal['name'].replace(' ', '_')}_IC_Deck.pptx"
+    embed_source = analysis.get("summary") or ""
     return _upload_and_record(
-        deal_id, filename, content, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "Drafted Deck"
+        deal_id,
+        filename,
+        content,
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "Drafted Deck",
+        embed_source,
     )
+
+
+def draft_and_store_cover_email(deal_id: str) -> dict[str, Any]:
+    """Previously ephemeral — draft_cover_email() only ever returned text
+    for the frontend to display, with nothing durable written anywhere
+    (same gap web_research had). Now stored through the same real
+    Storage+Document write path as the memo/deck, real embedding included,
+    so a drafted email is genuinely searchable and reappears in the
+    Documents tab instead of vanishing once the response leaves memory."""
+    email_text = draft_cover_email(deal_id)
+    deal, _analysis = _get_deal_and_analysis(deal_id)
+    filename = f"{deal['name'].replace(' ', '_')}_Cover_Email.txt"
+    doc = _upload_and_record(deal_id, filename, email_text.encode("utf-8"), "text/plain", "Drafted Email", email_text)
+    doc["email"] = email_text
+    return doc
+
+
+def draft_and_store_notebooklm_summary(deal_id: str) -> dict[str, Any]:
+    """Same fix as draft_and_store_cover_email, for the source-cited
+    summary — previously ephemeral, now a real stored/embedded document."""
+    summary_text = draft_notebooklm_summary(deal_id)
+    deal, _analysis = _get_deal_and_analysis(deal_id)
+    filename = f"{deal['name'].replace(' ', '_')}_Source_Cited_Summary.txt"
+    doc = _upload_and_record(
+        deal_id, filename, summary_text.encode("utf-8"), "text/plain", "Drafted Summary", summary_text
+    )
+    doc["summary"] = summary_text
+    return doc

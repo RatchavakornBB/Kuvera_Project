@@ -37,6 +37,11 @@ _MEDIA_TYPES = {
     "txt": "text/plain",
 }
 
+# Public alias — agents/web_source.py reads this to decide whether a
+# directly-linked URL (not a webpage) is a file type Claude can actually
+# read, rather than duplicating this list.
+SUPPORTED_MEDIA_TYPES = _MEDIA_TYPES
+
 DOCX_MEDIA_TYPE = _MEDIA_TYPES["docx"]
 TEXT_MEDIA_TYPE = _MEDIA_TYPES["txt"]
 

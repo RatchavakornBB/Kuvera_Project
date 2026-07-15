@@ -10,6 +10,7 @@ AGENT.md Section 11's deal_id scope invariant extended to chat.
 
 from agents.chat_memory import maybe_digest_conversation
 from agents.errors import NodeFailure
+from agents.nodes.drafting_router import classify_draft_type
 from agents.nodes.orchestrator import classify_intent
 from agents.nodes.stage_update import extract_stage_update
 from agents.nodes.web_research import web_research
@@ -19,8 +20,10 @@ from starlette.concurrency import run_in_threadpool
 from app.services import analyze as analyze_service
 from app.services import chat_conversations as chat_conversations_service
 from app.services import concierge as concierge_service
+from app.services import contracts as contracts_service
 from app.services import deals as deals_service
 from app.services import documents as documents_service
+from app.services import drafting as drafting_service
 
 router = APIRouter(tags=["chat"])
 
@@ -37,7 +40,22 @@ async def _handle_message(deal_id: str | None, message: str) -> dict:
     if route == "web_research":
         result = await run_in_threadpool(web_research, message)
         sources = [c["url"] for c in result["citations"] if c.get("url")]
-        return {"role": "assistant", "text": result["answer"], "sources": sources}
+        response: dict = {"role": "assistant", "text": result["answer"], "sources": sources}
+        try:
+            doc = await run_in_threadpool(
+                documents_service.create_document_from_research,
+                deal_id,
+                message,
+                result["answer"],
+                result["citations"],
+            )
+            response["artifact"] = {"title": f"{doc['name']} — research note", "type": "Doc", "deal_id": deal_id}
+        except Exception:
+            # Best-effort, same contract as create_document_from_url's own
+            # summarization step — a persistence failure must never break
+            # the chat answer the user is actively waiting on.
+            pass
+        return response
 
     if route == "analyst_lead":
         doc = await run_in_threadpool(documents_service.get_latest_document, deal_id)
@@ -49,6 +67,47 @@ async def _handle_message(deal_id: str | None, message: str) -> dict:
             "role": "assistant",
             "text": f"Analysis complete on {doc['name']}. {preview}… (open the artifact below for the full summary, risk flags, IC memo, and pricing note)",
             "artifact": {"title": f"{doc['name']} — IC memo draft", "type": "Doc", "deal_id": deal_id},
+        }
+
+    if route == "contracts_lead":
+        doc = await run_in_threadpool(documents_service.get_latest_document, deal_id, "Contract")
+        if doc is None:
+            return {"role": "assistant", "text": "There's no contract uploaded for this deal yet to analyze."}
+        result = await run_in_threadpool(contracts_service.reanalyze_contract, doc["id"])
+        preview = result["summary"][:300].rsplit(" ", 1)[0]
+        return {
+            "role": "assistant",
+            "text": (
+                f"Contract analysis complete on {doc['name']}. {preview}… "
+                f"({len(result['clauses'])} clause(s) extracted — open the artifact below for the full "
+                "summary and clauses)"
+            ),
+            "artifact": {"title": f"{doc['name']} — contract analysis", "type": "Doc", "deal_id": deal_id},
+        }
+
+    if route == "drafting_lead":
+        draft_type = await run_in_threadpool(classify_draft_type, message)
+        try:
+            if draft_type == "memo":
+                doc = await run_in_threadpool(drafting_service.draft_memo, deal_id)
+                text = f"Drafted the IC memo — {doc['name']}."
+            elif draft_type == "deck":
+                doc = await run_in_threadpool(drafting_service.draft_deck, deal_id)
+                text = f"Drafted the IC deck — {doc['name']}."
+            elif draft_type == "email":
+                doc = await run_in_threadpool(drafting_service.draft_email, deal_id)
+                text = doc["email"]
+            else:
+                doc = await run_in_threadpool(drafting_service.draft_summary, deal_id)
+                text = doc["summary"]
+        except ValueError as e:
+            # _get_deal_and_analysis's "no stored analysis yet" case — a
+            # real, expected precondition failure, not a NodeFailure.
+            return {"role": "assistant", "text": str(e)}
+        return {
+            "role": "assistant",
+            "text": text,
+            "artifact": {"title": f"{doc['name']} — {draft_type}", "type": "Doc", "deal_id": deal_id},
         }
 
     if route == "update_stage":
