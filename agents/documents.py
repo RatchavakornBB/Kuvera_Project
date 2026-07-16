@@ -84,6 +84,17 @@ def build_content_block(content: bytes, media_type: str) -> dict[str, Any]:
     }
 
 
+def get_document_deal_id(document_id: str) -> str | None:
+    """Small, separate lookup from fetch_document() since most callers only
+    need the file bytes — used by agents/contracts_graph.py so a Contracts
+    Lead loop run can scope its search_knowledge calls to the right deal's
+    industry without forcing every fetch_document() caller to pay for a join
+    it doesn't need."""
+    client = get_client()
+    row = client.table("documents").select("deal_id").eq("id", document_id).execute().data
+    return row[0]["deal_id"] if row else None
+
+
 def fetch_document(document_id: str) -> tuple[bytes, str, str]:
     """Returns (file_bytes, filename, media_type)."""
     client = get_client()

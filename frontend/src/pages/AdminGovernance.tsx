@@ -5,13 +5,15 @@ import { PendingApprovalsTab } from '../components/admin/PendingApprovalsTab';
 import { AuditLogTab } from '../components/admin/AuditLogTab';
 import { KnowledgeBaseTab } from '../components/admin/KnowledgeBaseTab';
 import { LearningAgentTab } from '../components/admin/LearningAgentTab';
+import { EvalCasesTab } from '../components/admin/EvalCasesTab';
 
-type AdminTab = 'agents' | 'skills' | 'pending' | 'audit' | 'knowledge' | 'learning';
+type AdminTab = 'agents' | 'skills' | 'pending' | 'audit' | 'knowledge' | 'learning' | 'evalcases';
 
 const TABS: { key: AdminTab; label: string }[] = [
   { key: 'agents', label: 'Agents & Models' },
   { key: 'skills', label: 'Skills' },
   { key: 'pending', label: 'Pending Approvals' },
+  { key: 'evalcases', label: 'Eval Cases' },
   { key: 'knowledge', label: 'Knowledge Base' },
   { key: 'learning', label: 'Learning Agent' },
   { key: 'audit', label: 'Audit Log' },
@@ -32,9 +34,8 @@ export function AdminGovernance() {
           Learning Agent tab runs real outside-world research and can propose real skill changes
           into the same Pending Approvals queue, where a real (on-demand) eval pass-rate bar —
           real candidate output + real LLM-as-judge grading against a small real test set — helps
-          triage a proposal before approving it. Eval cases exist for 3 agents so far
-          (pricing_advisor, ic_memo_drafter, risk_flagger); others show "no eval cases defined"
-          rather than a fabricated score.
+          triage a proposal before approving it. All 13 core agents now ship at least one built-in
+          eval case; use the Eval Cases tab to add more per agent without touching code.
         </div>
       </div>
 
@@ -55,6 +56,7 @@ export function AdminGovernance() {
       {tab === 'agents' && <AgentsModelsTab />}
       {tab === 'skills' && <SkillsTab />}
       {tab === 'pending' && <PendingApprovalsTab />}
+      {tab === 'evalcases' && <EvalCasesTab />}
       {tab === 'knowledge' && <KnowledgeBaseTab />}
       {tab === 'learning' && <LearningAgentTab />}
       {tab === 'audit' && <AuditLogTab />}

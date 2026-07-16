@@ -21,6 +21,15 @@ class AddSkill(BaseModel):
     instruction: str
 
 
+class CreateEvalCase(BaseModel):
+    agent_name: str
+    prompt: str
+    criteria: str
+    expected_tool_sequence: list[str] | None = None
+    trajectory_rubric: str | None = None
+    max_iterations: int | None = None
+
+
 @router.get("/agents")
 def list_agents():
     return governance_service.list_agents()
@@ -82,3 +91,34 @@ def run_eval_for_change(change_id: str):
 @router.get("/audit-log")
 def list_audit_log():
     return governance_service.list_audit_log()
+
+
+@router.get("/eval-cases")
+def list_eval_cases(agent_name: str | None = None):
+    return governance_service.list_eval_cases(agent_name)
+
+
+@router.get("/eval-cases/built-in-counts")
+def builtin_eval_case_counts():
+    return governance_service.builtin_eval_case_counts()
+
+
+@router.post("/eval-cases")
+def create_eval_case(body: CreateEvalCase):
+    try:
+        return governance_service.create_eval_case(
+            body.agent_name,
+            body.prompt,
+            body.criteria,
+            expected_tool_sequence=body.expected_tool_sequence,
+            trajectory_rubric=body.trajectory_rubric,
+            max_iterations=body.max_iterations,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.delete("/eval-cases/{case_id}")
+def delete_eval_case(case_id: str):
+    governance_service.delete_eval_case(case_id)
+    return {"status": "deleted"}

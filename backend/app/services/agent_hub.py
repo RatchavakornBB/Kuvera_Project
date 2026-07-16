@@ -15,13 +15,15 @@ LEAD_GROUPS: dict[str, str] = {
     "risk_flagger": "Analyst Lead",
     "ic_memo_drafter": "Analyst Lead",
     "pricing_advisor": "Analyst Lead",
-    "contract_summarizer": "Contracts Lead",
-    "clause_extractor": "Contracts Lead",
+    "contract_summarizer": "Contracts Lead",  # superseded by contracts_lead's agentic loop; kept for eval fixtures
+    "clause_extractor": "Contracts Lead",  # superseded by contracts_lead's agentic loop; kept for eval fixtures
+    "contracts_lead": "Contracts Lead",
     "concierge_qa": "Concierge",
     "orchestrator": "Orchestrator",
     "knowledge_promoter": "Knowledge Agent",
     "industry_brief": "Knowledge Agent",
     "competitor_brief": "Knowledge Agent",
+    "company_research": "Knowledge Agent",
     "learning_agent": "Learning Agent",
     "drafting_lead": "Drafting Lead",
 }
@@ -29,12 +31,24 @@ LEAD_GROUPS: dict[str, str] = {
 # The Analyst Lead's real, actual LangGraph edges (agents/graph.py) — used
 # for the live graph view. Any change to that graph's shape must be mirrored
 # here, or the "live" view stops matching the real orchestration.
+#
+# ic_memo_drafter and pricing_advisor are each internally three LangGraph
+# nodes now (decide/act/finalize, agents/nodes/ic_memo_drafter.py /
+# pricing_advisor.py) — but every internal node still calls
+# call_model_step() under the single "ic_memo_drafter"/"pricing_advisor"
+# agent_name, so status tracking (agent_invocations, keyed by agent_name)
+# is unaffected. This view keeps those two as one conceptual node each, with
+# a self-loop edge added to represent the real decide<->act cycle honestly,
+# rather than fragmenting the grid's live-status lookup across sub-node
+# names that don't correspond to any real agent_configs row.
 ANALYST_LEAD_GRAPH = {
     "nodes": ["doc_summarizer", "risk_flagger", "ic_memo_drafter", "pricing_advisor"],
     "edges": [
         {"from": "doc_summarizer", "to": "risk_flagger"},
         {"from": "risk_flagger", "to": "ic_memo_drafter"},
         {"from": "risk_flagger", "to": "pricing_advisor"},
+        {"from": "ic_memo_drafter", "to": "ic_memo_drafter"},
+        {"from": "pricing_advisor", "to": "pricing_advisor"},
     ],
 }
 

@@ -24,6 +24,7 @@ AGENT_MODELS: dict[str, str] = {
     "pricing_advisor": "claude-sonnet-5",
     "contract_summarizer": "claude-sonnet-5",
     "clause_extractor": "claude-sonnet-5",
+    "contracts_lead": "claude-sonnet-5",
     "concierge_qa": "claude-sonnet-5",
     "orchestrator": "claude-sonnet-5",
     "knowledge_promoter": "claude-sonnet-5",
@@ -31,6 +32,7 @@ AGENT_MODELS: dict[str, str] = {
     "competitor_brief": "claude-sonnet-5",
     "learning_agent": "claude-sonnet-5",
     "drafting_lead": "claude-sonnet-5",
+    "company_research": "claude-sonnet-5",
 }
 DEFAULT_MODEL = "claude-sonnet-5"
 
@@ -68,6 +70,7 @@ def call_model(
     system: str | None = None,
     max_tokens: int = 4096,
     betas: list[str] | None = None,
+    track_invocation: bool = True,
 ) -> anthropic.types.Message:
     """Dispatches a chat completion for `agent_name` to that agent's
     configured model_id. Returns the provider's native response object —
@@ -82,7 +85,15 @@ def call_model(
 
     `betas` opts into Anthropic beta-only server tools (e.g. `web_fetch`,
     still beta as of this build) by routing through `client.beta.messages`
-    instead of the standard endpoint — omit it for every other call."""
+    instead of the standard endpoint — omit it for every other call.
+
+    `track_invocation=False` skips the per-call agent_invocations row.
+    Used by agents/loop_runner.py: a multi-step agentic loop brackets one
+    invocation row around the whole run (start before the loop, finish
+    after) instead of one row per API call inside it — otherwise a single
+    4-iteration loop would create 4 rows and break the Agent Hub's
+    "one row per top-level invocation" semantics. Every existing
+    single-shot caller is unaffected (default True)."""
 
     config = get_agent_config(agent_name)
     model_id = config["model_id"] if config else AGENT_MODELS.get(agent_name, DEFAULT_MODEL)
@@ -91,7 +102,7 @@ def call_model(
     effective_system = f"{skill_content}\n\n{system}" if skill_content and system else skill_content or system
 
     provider = _provider_for(model_id)
-    invocation_id = start_invocation(agent_name)
+    invocation_id = start_invocation(agent_name) if track_invocation else None
 
     if provider == "anthropic":
         client = _anthropic_client()
@@ -112,10 +123,13 @@ def call_model(
             else:
                 response = client.messages.create(**kwargs)
         except Exception as e:
-            finish_invocation(invocation_id, "error", str(e))
+            if track_invocation:
+                finish_invocation(invocation_id, "error", str(e))
             raise
-        finish_invocation(invocation_id, "success")
+        if track_invocation:
+            finish_invocation(invocation_id, "success")
         return response
 
-    finish_invocation(invocation_id, "error", f"Provider '{provider}' is not wired up yet")
+    if track_invocation:
+        finish_invocation(invocation_id, "error", f"Provider '{provider}' is not wired up yet")
     raise NotImplementedError(f"Provider '{provider}' is not wired up yet (model_id={model_id})")

@@ -287,6 +287,13 @@ export interface ApiEvalResult {
   output: string;
   passed: boolean;
   reason: string;
+  // Present only for trajectory-graded cases (contracts_lead/ic_memo_drafter/
+  // pricing_advisor with expected_tool_sequence or trajectory_rubric set) —
+  // absent for ordinary single-shot results, same additive shape agents/evals.py's
+  // run_eval() returns.
+  steps?: { index: number; tool_name: string; tool_input: unknown; tool_output: string | null; status: string }[];
+  result_kind?: 'graded' | 'circuit_broken' | 'truncated';
+  circuit_broken_tools?: string[];
 }
 
 export interface ApiPendingChange {
@@ -380,6 +387,60 @@ export async function runEvalForChange(changeId: string): Promise<{ pass_rate: n
   const res = await fetch(`${API_BASE_URL}/admin/pending-approvals/${changeId}/run-eval`, { method: 'POST' });
   if (!res.ok) throw new Error(`POST run-eval failed: ${res.status}`);
   return res.json();
+}
+
+export interface ApiEvalCase {
+  id: string;
+  agent_name: string;
+  prompt: string;
+  criteria: string;
+  created_at: string;
+  expected_tool_sequence: string[] | null;
+  trajectory_rubric: string | null;
+  max_iterations: number | null;
+}
+
+export async function fetchEvalCases(agentName?: string): Promise<ApiEvalCase[]> {
+  const search = agentName ? `?agent_name=${encodeURIComponent(agentName)}` : '';
+  const res = await fetch(`${API_BASE_URL}/admin/eval-cases${search}`);
+  if (!res.ok) throw new Error(`GET /admin/eval-cases failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchBuiltinEvalCaseCounts(): Promise<Record<string, number>> {
+  const res = await fetch(`${API_BASE_URL}/admin/eval-cases/built-in-counts`);
+  if (!res.ok) throw new Error(`GET /admin/eval-cases/built-in-counts failed: ${res.status}`);
+  return res.json();
+}
+
+export async function createEvalCase(
+  agentName: string,
+  prompt: string,
+  criteria: string,
+  trajectory?: { expectedToolSequence?: string[]; trajectoryRubric?: string; maxIterations?: number },
+): Promise<ApiEvalCase> {
+  const res = await fetch(`${API_BASE_URL}/admin/eval-cases`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      agent_name: agentName,
+      prompt,
+      criteria,
+      ...(trajectory?.expectedToolSequence ? { expected_tool_sequence: trajectory.expectedToolSequence } : {}),
+      ...(trajectory?.trajectoryRubric ? { trajectory_rubric: trajectory.trajectoryRubric } : {}),
+      ...(trajectory?.maxIterations ? { max_iterations: trajectory.maxIterations } : {}),
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(`POST /admin/eval-cases failed: ${res.status} ${body ? JSON.stringify(body.detail) : ''}`);
+  }
+  return res.json();
+}
+
+export async function deleteEvalCase(caseId: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/admin/eval-cases/${caseId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`DELETE /admin/eval-cases/${caseId} failed: ${res.status}`);
 }
 
 export async function fetchAuditLog(): Promise<ApiAuditEntry[]> {
@@ -554,6 +615,16 @@ export async function refreshCompetitorBrief(companyName: string, industry: stri
     body: JSON.stringify({ company_name: companyName, industry }),
   });
   if (!res.ok) throw new Error(`POST refresh-competitor-brief failed: ${res.status}`);
+  return res.json();
+}
+
+export async function refreshCompanyResearch(dealId: string): Promise<ApiKnowledgeRecord> {
+  const res = await fetch(`${API_BASE_URL}/admin/knowledge-base/refresh-company-research`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deal_id: dealId }),
+  });
+  if (!res.ok) throw new Error(`POST refresh-company-research failed: ${res.status}`);
   return res.json();
 }
 

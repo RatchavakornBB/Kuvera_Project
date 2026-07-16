@@ -6,7 +6,10 @@ every real LLM invocation — this is not a decorative admin UI."""
 from datetime import datetime, timezone
 from typing import Any
 
-from agents.evals import run_eval
+from agents.eval_cases import create_eval_case as _create_eval_case
+from agents.eval_cases import delete_eval_case as _delete_eval_case
+from agents.eval_cases import list_eval_cases as _list_eval_cases
+from agents.evals import EVAL_CASES, run_eval
 
 from app.db import get_client
 
@@ -167,3 +170,36 @@ def run_eval_for_change(change_id: str) -> dict[str, Any]:
     ).eq("id", change_id).execute()
 
     return result
+
+
+def list_eval_cases(agent_name: str | None = None) -> list[dict[str, Any]]:
+    return _list_eval_cases(agent_name)
+
+
+def create_eval_case(
+    agent_name: str,
+    prompt: str,
+    criteria: str,
+    expected_tool_sequence: list[str] | None = None,
+    trajectory_rubric: str | None = None,
+    max_iterations: int | None = None,
+) -> dict[str, Any]:
+    return _create_eval_case(
+        agent_name,
+        prompt,
+        criteria,
+        expected_tool_sequence=expected_tool_sequence,
+        trajectory_rubric=trajectory_rubric,
+        max_iterations=max_iterations,
+    )
+
+
+def delete_eval_case(case_id: str) -> None:
+    _delete_eval_case(case_id)
+
+
+def builtin_eval_case_counts() -> dict[str, int]:
+    """How many code-owned fixtures agents/evals.py ships per agent — shown
+    alongside the admin-authored count so the Eval Cases tab can say "3
+    built-in + 2 custom" instead of only showing what an admin added."""
+    return {agent_name: len(cases) for agent_name, cases in EVAL_CASES.items()}
