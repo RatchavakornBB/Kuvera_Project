@@ -3,7 +3,10 @@ import { fetchSchedulerStatus, fetchScheduledRuns } from '../../lib/api';
 
 const JOB_LABEL: Record<string, string> = {
   key_date_check: 'Key-date check (every 5 min)',
+  stalled_deal_check: 'Stalled-deal check (every 5 min)',
   industry_brief_refresh: 'Industry Brief refresh (every 24h)',
+  competitor_brief_refresh: 'Competitor Brief refresh (every 24h)',
+  company_research_refresh: 'Company Research refresh (every 24h)',
 };
 
 function formatDateTime(iso: string | null): string {

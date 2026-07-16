@@ -4,14 +4,17 @@ across deals — enforced structurally by agents/deal_context.py, which
 never fetches another deal's rows in the first place).
 
 The current Industry Brief for this deal's industry (agents/industry_brief.py's
-periodically-refreshed cache, Section 10.1's "fine-tuning-style" storage) is
-passed via `system`, not stuffed into the per-deal user content — it's the
-one part of this call that's actually stable across many consecutive calls to
-this agent, so it's the one part worth marking as a cache breakpoint
+periodically-refreshed cache, Section 10.1's "fine-tuning-style" storage) and
+the current Company Research note for this deal's own target company
+(agents/company_research.py, refreshed daily per-deal) are both passed via
+`system`, not stuffed into the per-deal user content — they're the parts of
+this call that are actually stable across many consecutive calls to this
+agent, so they're the parts worth marking as a cache breakpoint
 (call_model's cache_control on the system block)."""
 
 from agents.adapters.model_adapter import call_model
 from agents.chat_memory import chat_history_context
+from agents.company_research import get_current_company_research
 from agents.deal_context import build_deal_context
 from agents.industry_brief import get_current_industry_brief
 from agents.knowledge import get_deal_industry
@@ -53,6 +56,13 @@ def _run_once(deal_id: str, question: str) -> dict:
     system = SYSTEM_PROMPT
     if brief:
         system += f"\n\nINDUSTRY BACKGROUND ({brief['industry']}, not deal-specific): {brief['summary']}"
+
+    company_research = get_current_company_research(deal_id)
+    if company_research:
+        system += (
+            f"\n\nCOMPANY RESEARCH ({company_research['company_name']}, refreshed periodically): "
+            f"{company_research['summary']}"
+        )
 
     response = call_model(
         "concierge_qa",

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  fetchDeals,
   fetchKnowledgeRecords,
+  refreshCompanyResearch,
   refreshCompetitorBrief,
   refreshIndustryBrief,
   searchKnowledgeRecords,
@@ -123,6 +125,53 @@ function BriefRefreshForm() {
   );
 }
 
+function CompanyResearchRefreshForm() {
+  const queryClient = useQueryClient();
+  const [dealId, setDealId] = useState('');
+
+  const dealsQuery = useQuery({ queryKey: ['deals'], queryFn: fetchDeals });
+
+  const mutation = useMutation({
+    mutationFn: () => refreshCompanyResearch(dealId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['knowledge-base'] }),
+  });
+
+  return (
+    <div className="rounded border border-grid bg-panel p-3">
+      <div className="mb-2 text-[10.5px] font-semibold text-white">Refresh Company Research</div>
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={dealId}
+          onChange={(e) => setDealId(e.target.value)}
+          className="rounded-sm border border-grid bg-terminal-black px-2 py-1.5 text-[11px] text-white"
+        >
+          <option value="">Select a deal…</option>
+          {dealsQuery.data?.map((deal) => (
+            <option key={deal.id} value={deal.id}>
+              {deal.name}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => mutation.mutate()}
+          disabled={!dealId || mutation.isPending}
+          className="cursor-pointer rounded border border-grid bg-transparent px-2.5 py-1.5 text-[10.5px] text-blue disabled:opacity-40"
+        >
+          {mutation.isPending ? 'Researching…' : 'Refresh Company Research'}
+        </button>
+      </div>
+      <div className="mt-1.5 text-[9.5px] text-gray">
+        Real Claude web_search research on that deal's own target company, ~10-30s. Also runs
+        automatically every 24h via the real scheduler above — this button triggers an on-demand
+        refresh in addition to that.
+      </div>
+      {mutation.isError && (
+        <div className="mt-1.5 text-[10px] text-red">Refresh failed: {String(mutation.error)}</div>
+      )}
+    </div>
+  );
+}
+
 export function KnowledgeBaseTab() {
   const [industry, setIndustry] = useState('');
   const [category, setCategory] = useState('');
@@ -197,12 +246,14 @@ export function KnowledgeBaseTab() {
 
       <div className="text-[10px] text-gray">
         Real, promoted from closed deals — not seeded or fabricated. Close a deal from its Deal
-        Detail header to populate Deal Profile / Evaluation / Analysis / Outcome records. Industry
-        and Competitor Insight are refreshed on demand below using real web search.
+        Detail header to populate Deal Profile / Evaluation / Analysis / Outcome records. Industry,
+        Competitor, and Company Insight all refresh automatically every 24h via the real scheduler
+        below — the forms here trigger an on-demand refresh in addition to that.
       </div>
 
       <SchedulerStatusPanel />
       <BriefRefreshForm />
+      <CompanyResearchRefreshForm />
 
       {isLoading && <div className="text-[11px] text-gray">Loading…</div>}
 

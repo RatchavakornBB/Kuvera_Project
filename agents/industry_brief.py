@@ -3,13 +3,17 @@ style" storage the doc describes: a compact reference document refreshed periodi
 as background context, rather than retrieved fresh via RAG on every query (that's what Company
 Insight is for, and it's already covered by agents/knowledge.py's deal-scoped retrieval).
 
-Scheduled via backend/app/scheduler.py's `industry_brief_refresh` job (every 24h, real APScheduler
-interval) for industry Briefs; competitor Briefs stay admin-triggered via the knowledge-base route
-since there's no fixed company roster to loop over the way there is a fixed industry list. Reuses
-knowledge_base (phase5-009) rather than a new table — industry/competitor briefs are just
-knowledge_base rows with no source_deal_id, marked current via `superseded_at is null` rather than
-deleted when refreshed, so a prior Brief stays queryable for audit ("the Brief said X as of date
-Y") instead of being silently overwritten.
+Scheduled via backend/app/scheduler.py's `industry_brief_refresh` and `competitor_brief_refresh` jobs
+(each every 24h, real APScheduler interval) — competitor Briefs are no longer admin-trigger-only:
+the scheduler loops every active deal's own company name as the roster (agents/company_research.py
+covers the same roster from the deal's-own-company angle; there's no separate "competitors" data
+source in this schema, so the overlap is accepted). Reuses knowledge_base (phase5-009) rather than a
+new table — industry/competitor briefs are just knowledge_base rows with no source_deal_id, marked
+current via `superseded_at is null` rather than deleted when refreshed, so a prior Brief stays
+queryable for audit ("the Brief said X as of date Y") instead of being silently overwritten. From the
+second refresh onward, the prompt also asks the model to focus on what's changed since the prior
+version's `created_at` (agents/knowledge.py::since_clause) — a request, not a guaranteed filter,
+since neither web_search nor web_fetch has a server-side date-restriction parameter.
 
 Uses Claude's real web_search and web_fetch server tools (same tools as agents/nodes/web_research.py
 for web_search; web_fetch is still beta-only in the installed SDK, hence `betas=WEB_FETCH_BETAS`)
@@ -23,6 +27,7 @@ from typing import Any
 from agents.adapters.model_adapter import call_model
 from agents.db import get_client
 from agents.embeddings import embed_text
+from agents.knowledge import get_current_knowledge_row, since_clause, supersede_and_insert
 from agents.retry import with_retry
 
 WEB_SEARCH_TOOL = {"type": "web_search_20250305", "name": "web_search", "max_uses": 5}
@@ -76,27 +81,15 @@ def _synthesize(agent_name: str, prompt: str) -> dict[str, Any]:
     return with_retry(agent_name, _call)
 
 
-def _supersede_and_insert(client: Any, category: str, match: dict[str, str], row: dict[str, Any]) -> dict[str, Any]:
-    """Marks the current row(s) for this scope superseded rather than deleting
-    them — old Briefs stay queryable (`superseded_at is null` selects only the
-    live one) so a downstream disagreement can be traced back to "the Brief
-    said X as of date Y" instead of the prior version being silently gone."""
-    now = datetime.now(timezone.utc).isoformat()
-    query = client.table("knowledge_base").update({"superseded_at": now}).eq("category", category).is_("superseded_at", "null")
-    for column, value in match.items():
-        query = query.eq(column, value)
-    query.execute()
-
-    res = client.table("knowledge_base").insert({"category": category, "superseded_at": None, **row}).execute()
-    return res.data[0]
-
-
 def refresh_industry_brief(industry: str) -> dict[str, Any]:
-    result = _synthesize("industry_brief", INDUSTRY_BRIEF_PROMPT.format(industry=industry))
+    current = get_current_knowledge_row("industry_insight", industry=industry)
+    since = current["created_at"] if current else None
+    prompt = INDUSTRY_BRIEF_PROMPT.format(industry=industry) + since_clause(since)
+    result = _synthesize("industry_brief", prompt)
     embedding = embed_text(result["brief"], input_type="document")
 
     client = get_client()
-    return _supersede_and_insert(
+    return supersede_and_insert(
         client,
         "industry_insight",
         {"industry": industry},
@@ -111,11 +104,14 @@ def refresh_industry_brief(industry: str) -> dict[str, Any]:
 
 
 def refresh_competitor_brief(company_name: str, industry: str) -> dict[str, Any]:
-    result = _synthesize("competitor_brief", COMPETITOR_BRIEF_PROMPT.format(company=company_name, industry=industry))
+    current = get_current_knowledge_row("competitor_insight", company_name=company_name)
+    since = current["created_at"] if current else None
+    prompt = COMPETITOR_BRIEF_PROMPT.format(company=company_name, industry=industry) + since_clause(since)
+    result = _synthesize("competitor_brief", prompt)
     embedding = embed_text(result["brief"], input_type="document")
 
     client = get_client()
-    return _supersede_and_insert(
+    return supersede_and_insert(
         client,
         "competitor_insight",
         {"company_name": company_name},
@@ -133,15 +129,4 @@ def get_current_industry_brief(industry: str) -> dict[str, Any] | None:
     """The read side of the Brief cache — what a per-deal agent (e.g.
     concierge_qa) calls to inject the current, non-superseded Brief for a
     deal's industry into its own context, instead of re-researching it."""
-    client = get_client()
-    rows = (
-        client.table("knowledge_base")
-        .select("industry, summary, created_at")
-        .eq("category", "industry_insight")
-        .eq("industry", industry)
-        .is_("superseded_at", "null")
-        .limit(1)
-        .execute()
-        .data
-    )
-    return rows[0] if rows else None
+    return get_current_knowledge_row("industry_insight", industry=industry)

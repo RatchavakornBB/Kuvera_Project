@@ -7,10 +7,14 @@ cosine-distance search over real Voyage embeddings.
 Categories populated per deal close: deal_profile, evaluation_approach, analysis_approach,
 strategy_planning_approach, outcome, risk_signals_resolution, prompt_engineering,
 loop_engineering — all grounded in this deal's real rows or the system's real current
-configuration. NOT populated: industry_insight, competitor_insight, company_insight — these are
-meant to be periodically-refreshed cross-deal Briefs (system-architecture.md's own framing), which
-needs an outside-world news/company-monitoring pipeline that doesn't exist in this build; nothing
-here fabricates them just to fill the category out.
+configuration. industry_insight/competitor_insight (agents/industry_brief.py) and company_insight
+(agents/company_research.py) are populated separately, on their own daily scheduler jobs — real
+periodically-refreshed cross-deal/per-deal Briefs, not synthesized from a single deal's close.
+
+This module also owns the shared "versioned knowledge row" primitive (supersede_and_insert /
+get_current_knowledge_row) used by all three Brief-refreshing modules above: a Brief is a current
+snapshot that gets periodically replaced, not an accumulating history, but the prior version stays
+queryable (superseded_at) rather than being deleted outright.
 """
 
 import json
@@ -287,6 +291,62 @@ def list_knowledge(industry: str | None = None, category: str | None = None) -> 
     if category:
         query = query.eq("category", category)
     return query.order("created_at", desc=True).execute().data
+
+
+def supersede_and_insert(client: Any, category: str, match: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
+    """Marks the current row(s) for this scope superseded rather than deleting
+    them — old Briefs stay queryable (`superseded_at is null` selects only the
+    live one) so a downstream disagreement can be traced back to "the Brief
+    said X as of date Y" instead of the prior version being silently gone.
+    Shared by industry_brief.py (match on industry/company_name) and
+    company_research.py (match on source_deal_id) — moved here rather than
+    left as a private per-module copy since a drift between copies would mean
+    a scope superseding the wrong rows."""
+    now = datetime.now(timezone.utc).isoformat()
+    query = client.table("knowledge_base").update({"superseded_at": now}).eq("category", category).is_("superseded_at", "null")
+    for column, value in match.items():
+        query = query.eq(column, value)
+    query.execute()
+
+    res = client.table("knowledge_base").insert({"category": category, "superseded_at": None, **row}).execute()
+    return res.data[0]
+
+
+def get_current_knowledge_row(category: str, **match: Any) -> dict[str, Any] | None:
+    """The read side of the versioned-Brief pattern — the current
+    (non-superseded) row for a given category + arbitrary match columns
+    (e.g. industry=..., company_name=..., or source_deal_id=...). Used both
+    to expose a Brief's summary to a consuming agent's context (e.g.
+    concierge_qa) and, via its `created_at`, as the "since I last checked"
+    cutoff for a refresh's next research pass."""
+    client = get_client()
+    query = (
+        client.table("knowledge_base")
+        .select("id, source_deal_id, category, company_name, industry, content, summary, created_at")
+        .eq("category", category)
+        .is_("superseded_at", "null")
+    )
+    for column, value in match.items():
+        query = query.eq(column, value)
+    result = query.limit(1).execute().data
+    return result[0] if result else None
+
+
+def since_clause(since: str | None) -> str:
+    """Appended to a Brief-refresh prompt when a prior version exists —
+    steers the model's web_search/web_fetch usage toward what's changed
+    since the last check rather than re-covering old ground. This is a
+    prompt-level request only: neither tool has a server-side date-
+    restriction parameter in the installed SDK, so there is no structural
+    guarantee the model honors it, same as this codebase's existing
+    "current, real information" instructions elsewhere."""
+    if not since:
+        return ""
+    return (
+        f"\n\nA prior version of this research exists from {since}. Focus on what's new or changed "
+        "since then — recent news, filings, or developments after that date — rather than "
+        "re-covering ground already established."
+    )
 
 
 def backfill_missing_embeddings() -> int:

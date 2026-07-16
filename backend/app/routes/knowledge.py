@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from app.services import company_research as company_research_service
 from app.services import knowledge as knowledge_service
 
 router = APIRouter(prefix="/admin/knowledge-base", tags=["knowledge"])
@@ -13,6 +14,10 @@ class RefreshIndustryBrief(BaseModel):
 class RefreshCompetitorBrief(BaseModel):
     company_name: str
     industry: str
+
+
+class RefreshCompanyResearch(BaseModel):
+    deal_id: str
 
 
 @router.get("")
@@ -33,6 +38,11 @@ def refresh_industry_brief(body: RefreshIndustryBrief):
 @router.post("/refresh-competitor-brief")
 def refresh_competitor_brief(body: RefreshCompetitorBrief):
     return knowledge_service.refresh_competitor_brief(body.company_name, body.industry)
+
+
+@router.post("/refresh-company-research")
+def refresh_company_research(body: RefreshCompanyResearch):
+    return company_research_service.refresh_company_research(body.deal_id)
 
 
 @router.post("/backfill-embeddings")
