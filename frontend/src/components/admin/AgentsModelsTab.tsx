@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAgentConfigs, proposeAgentChange, type ApiAgentConfig } from '../../lib/api';
 
-const KNOWN_MODELS = ['claude-sonnet-5', 'claude-opus-4-8', 'claude-haiku-4-5-20251001', 'claude-fable-5'];
+const KNOWN_MODELS = [
+  'claude-sonnet-5',
+  'claude-opus-4-8',
+  'claude-haiku-4-5-20251001',
+  'claude-fable-5',
+  'gemini-2.5-pro',
+  'gemini-2.5-flash',
+];
 
 function AgentRow({ agent }: { agent: ApiAgentConfig }) {
   const queryClient = useQueryClient();
@@ -46,8 +53,9 @@ export function AgentsModelsTab() {
   return (
     <div className="rounded border border-grid bg-panel">
       <div className="border-b border-grid px-4 py-2.5 text-[10px] uppercase tracking-wide text-gray">
-        Only claude-* models are actually wired to a provider right now — proposing a gpt-*/gemini-*
-        model_id will genuinely fail at call time (NotImplementedError), not silently no-op.
+        claude-* (Anthropic) and gemini-* (Google) are both wired to a real provider — an approved
+        switch takes effect on the agent's next call. gemini-* needs GOOGLE_API_KEY set; gpt-* is not
+        wired yet and will fail at call time.
       </div>
       {isLoading && <div className="px-4 py-3 text-[11px] text-gray">Loading…</div>}
       {agents?.map((agent) => (

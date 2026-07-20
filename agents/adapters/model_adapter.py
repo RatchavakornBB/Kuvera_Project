@@ -1,10 +1,12 @@
 """The only path to any LLM provider — every LangGraph node calls
 call_model(), never a provider SDK directly (AGENT.md Section 1 / 11).
 
-Only Claude is actually called this week, but the shape here is what makes
-adding a second provider a config change instead of a node rewrite later:
-look up agent_name's model_id, dispatch to the client for that model_id's
-provider.
+Claude (Anthropic) and Gemini (Google) are both wired up for real: an agent
+switched to a gemini-* model_id through the governance loop actually reaches
+Google on the next call, with the response normalized back into an
+anthropic.types.Message so no node knows the difference (see
+gemini_adapter.py). Adding a third provider is the same shape: look up
+agent_name's model_id, dispatch to the client for that model_id's provider.
 """
 
 from functools import lru_cache
@@ -12,6 +14,7 @@ from functools import lru_cache
 import anthropic
 
 from agents.activity_tracker import finish_invocation, start_invocation
+from agents.adapters.gemini_adapter import call_gemini
 from agents.agent_config import get_agent_config
 from agents.config import settings
 
@@ -123,6 +126,30 @@ def call_model(
                 response = client.beta.messages.create(betas=betas, **kwargs)
             else:
                 response = client.messages.create(**kwargs)
+        except Exception as e:
+            if track_invocation:
+                finish_invocation(invocation_id, "error", str(e))
+            raise
+        if track_invocation:
+            finish_invocation(invocation_id, "success")
+        return response
+
+    if provider == "google":
+        # web_fetch and friends are Anthropic-only server tools; `betas` has no
+        # meaning here. No caller passes betas to a gemini-configured agent, but
+        # fail loud rather than silently drop the opt-in if that ever changes.
+        if betas:
+            if track_invocation:
+                finish_invocation(invocation_id, "error", "betas are Anthropic-only")
+            raise ValueError(f"betas={betas!r} are Anthropic-only and cannot be used with {model_id}")
+        try:
+            response = call_gemini(
+                model_id,
+                messages=messages,
+                tools=tools,
+                system=effective_system,
+                max_tokens=max_tokens,
+            )
         except Exception as e:
             if track_invocation:
                 finish_invocation(invocation_id, "error", str(e))

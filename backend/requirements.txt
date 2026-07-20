@@ -6,6 +6,7 @@ langgraph-checkpoint-postgres
 psycopg[binary]
 langchain-anthropic
 anthropic
+google-genai
 supabase
 python-dotenv
 pytest
