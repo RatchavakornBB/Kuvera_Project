@@ -8,10 +8,9 @@ and found+fixed a real bug (a Voyage rate limit was discarding whole synthesized
 failing to embed them). phase7-010 added auto-NDA-on-deal-create (new nda_drafter agent, see below).
 Everything live-verified against the real Anthropic API.
 Active task: none
-Status: idle (phase7-010 code complete + live-verified; NOT yet committed — awaiting user; the
-running uvicorn on :8000 is still on old code and needs a restart to serve the new /draft/nda route
-and the auto-NDA trigger)
-Last checkpoint commit: c86a8c7
+Status: idle (phase7-010 committed as 2a2f94e; backend uvicorn on :8000 restarted and confirmed
+serving the new code — /health OK, /deals/{deal_id}/draft/nda live in OpenAPI)
+Last checkpoint commit: 2a2f94e
 Blocked on: nothing.
 Note (2026-07-20): agents/adapters/model_adapter.py now also has a real Gemini (Google) adapter
 added by a PARALLEL session mid-task — not part of phase7-010. phase7-010 only added the
