@@ -37,6 +37,40 @@ IC MEMO DRAFT:
 {ic_memo}
 """
 
+NDA_PROMPT = """You are the Drafting Lead's document-prep agent at Kuvera Capital, an M&A advisory
+firm. Draft a professional MUTUAL Non-Disclosure Agreement (NDA) to be executed between Kuvera
+Capital ("the Firm") and the counterparty named below, ahead of sharing confidential information
+for a potential M&A transaction.
+
+Produce a complete, ready-for-legal-review draft with clearly numbered sections covering at least:
+parties and effective date; definition of Confidential Information; permitted use and the receiving
+party's obligations; exclusions from Confidential Information; term and survival; return or
+destruction of materials; no license and no warranty; governing law and jurisdiction; and a
+signature block for both parties.
+
+Use markdown: '#' for the title, '##' for each numbered section heading, and '**bold**' for defined
+terms. Where a real-world value is unknown (registered addresses, company numbers, signatory names,
+governing law/jurisdiction), insert a clearly-marked [PLACEHOLDER] rather than inventing specifics.
+This is a starting draft for a lawyer to review, not a substitute for legal advice.
+
+DEAL: {deal_name}
+COUNTERPARTY / CLIENT: {client}
+INDUSTRIES: {industries}
+DRAFT DATE: {date}
+"""
+
+
+def _get_deal(deal_id: str) -> dict[str, Any]:
+    """Deal-only fetch — the NDA drafter needs it because, unlike the
+    memo/deck/email/summary drafters, an NDA is produced at the very start of
+    a deal's life (before any Analyst-Lead analysis exists), so it must NOT go
+    through _get_deal_and_analysis (which raises when no analysis is stored)."""
+    client = get_client()
+    rows = client.table("deals").select("*").eq("id", deal_id).execute().data
+    if not rows:
+        raise ValueError(f"No deal with id {deal_id}")
+    return rows[0]
+
 
 def _get_deal_and_analysis(deal_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
     client = get_client()
@@ -228,6 +262,78 @@ def draft_and_store_ic_memo(deal_id: str) -> dict[str, Any]:
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "Drafted Memo",
         embed_source,
+    )
+
+
+def draft_nda(deal_id: str) -> str:
+    """Drafts a mutual NDA from the deal's own identifying fields (name,
+    client, industries). Depends on nothing but the deal row, so it can run the
+    instant a deal is created, before any document has been uploaded or
+    analyzed.
+
+    Uses its own `nda_drafter` agent identity, NOT `drafting_lead`, on purpose:
+    drafting_lead's governed skill (agent_configs) deliberately scopes that Lead
+    to cover-email/docx-assembly/source-cited-summary and forbids generating new
+    content from scratch — so calling it here made the model refuse (its refusal
+    text got stored as the "NDA"). Generative NDA drafting is a distinct
+    capability with its own agent, still flowing through call_model() so an admin
+    can attach/version a governed NDA skill for it later via the Admin UI."""
+    deal = _get_deal(deal_id)
+
+    def _call() -> str:
+        response = call_model(
+            "nda_drafter",
+            messages=[
+                {
+                    "role": "user",
+                    "content": NDA_PROMPT.format(
+                        deal_name=deal["name"],
+                        client=deal["client"],
+                        industries=", ".join(deal.get("industries") or []) or "n/a",
+                        date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                    ),
+                }
+            ],
+            max_tokens=2048,
+        )
+        for block in response.content:
+            if block.type == "text":
+                return block.text
+        raise ValueError(f"model returned no text block (stop_reason={response.stop_reason!r})")
+
+    return with_retry("nda_drafter", _call)
+
+
+def draft_nda_docx(deal_id: str) -> tuple[bytes, dict[str, Any]]:
+    deal = _get_deal(deal_id)
+    nda_text = draft_nda(deal_id)
+
+    doc = DocxDocument()
+    doc.add_heading("Mutual Non-Disclosure Agreement", level=0)
+    meta = doc.add_paragraph()
+    meta.add_run(f"Kuvera Capital & {deal['client']}  |  Deal: {deal['name']}  |  ").italic = True
+    meta.add_run(f"Draft generated {datetime.now(timezone.utc).strftime('%Y-%m-%d')}").italic = True
+    _add_markdown_paragraphs(doc, nda_text)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue(), deal
+
+
+def draft_and_store_nda(deal_id: str) -> dict[str, Any]:
+    """Auto-fired (best-effort, background) when a deal is created — see
+    app/services/deals.py::create_deal. Produces a real 'NDA' .docx through the
+    same Storage+Document write path as every other drafted artifact, so it
+    lands in the deal's Documents tab immediately."""
+    content, deal = draft_nda_docx(deal_id)
+    filename = f"{deal['name'].replace(' ', '_')}_NDA.docx"
+    return _upload_and_record(
+        deal_id,
+        filename,
+        content,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "NDA",
+        embed_source=f"Mutual NDA between Kuvera Capital and {deal['client']} for deal {deal['name']}",
     )
 
 

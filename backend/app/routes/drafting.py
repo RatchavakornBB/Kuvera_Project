@@ -23,6 +23,17 @@ def draft_memo(deal_id: str):
         raise HTTPException(status_code=500, detail=e.to_dict()) from e
 
 
+@router.post("/{deal_id}/draft/nda")
+def draft_nda(deal_id: str):
+    _require_deal(deal_id)
+    try:
+        return drafting_service.draft_nda(deal_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except NodeFailure as e:
+        raise HTTPException(status_code=500, detail=e.to_dict()) from e
+
+
 @router.post("/{deal_id}/draft/deck")
 def draft_deck(deal_id: str):
     _require_deal(deal_id)

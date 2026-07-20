@@ -5,11 +5,18 @@ timeout, artifact Open button, Sources document list, add-link sources, link aut
 complete, see below). phase7-008 added real episodic chat memory (persistent conversations, RAG
 recall, auto-digest, multi-tab). phase7-009 added tab deletion with forced digest-before-delete,
 and found+fixed a real bug (a Voyage rate limit was discarding whole synthesized digests, not just
-failing to embed them). Everything live-verified against the real Anthropic API.
+failing to embed them). phase7-010 added auto-NDA-on-deal-create (new nda_drafter agent, see below).
+Everything live-verified against the real Anthropic API.
 Active task: none
-Status: idle
+Status: idle (phase7-010 code complete + live-verified; NOT yet committed — awaiting user; the
+running uvicorn on :8000 is still on old code and needs a restart to serve the new /draft/nda route
+and the auto-NDA trigger)
 Last checkpoint commit: c86a8c7
 Blocked on: nothing.
+Note (2026-07-20): agents/adapters/model_adapter.py now also has a real Gemini (Google) adapter
+added by a PARALLEL session mid-task — not part of phase7-010. phase7-010 only added the
+`nda_drafter` entry to AGENT_MODELS there; left the Gemini work untouched. Re-read that file before
+assuming its shape.
 Note: backend/app/routes/chat.py, agents/web_source.py, backend/app/services/contracts.py,
 agents/documents.py, and related files have real parallel additions beyond what these PROCESS
 entries document (contracts_lead/drafting_lead/update_stage/web_research-to-document chat routing,
@@ -20,6 +27,23 @@ outside what was asked; re-read the actual files before assuming their behavior 
 ## Next up
 Nothing queued. If the user wants further work, check PROCESS/backlog.md's Done section for full
 history first, and docs/demo-script.md for the current honest Live vs. Design-only state.
+phase7-010 added auto-NDA-on-deal-create (user: "After create deal the AI will create the NDA doc
+for client and put in deal page"). When a deal is created, deals_service.create_deal() fires
+_draft_nda_async() on a daemon thread (best-effort — an NDA failure must never break/hang deal
+creation, mirroring documents.py's citation-link background pattern). It calls
+agents/drafting_lead.py::draft_and_store_nda() → draft_nda() (a real Claude call) → draft_nda_docx()
+(python-docx via the existing _add_markdown_paragraphs renderer) → _upload_and_record() (same real
+Storage+Document write path as memo/deck), producing a `type='NDA'` .docx that shows in the deal's
+Documents tab (DealFileLibrary lists all types, no filter — no frontend change needed). Also added a
+manual POST /deals/{id}/draft/nda (drafting service+route) for re-draft/verification. KEY DECISION
+(D-013): NDA drafting uses a NEW `nda_drafter` agent identity, NOT `drafting_lead` — drafting_lead's
+governed skill deliberately forbids from-scratch generation and the model correctly REFUSED when
+called as drafting_lead (its refusal text got saved as the "NDA" on the first verification run — a
+real finding, caught because the automated marker-check nearly false-passed on it). Switching to
+`nda_drafter` (added to AGENT_MODELS, no restrictive skill) produced a real 5.7KB NDA with proper
+numbered sections and zero refusal markers. Verified live end-to-end through create_deal() +
+TestClient; both throwaway "ZZ NDA Verify" test deals were cleaned up (rows + storage). Not
+committed yet.
 phase7-009 added conversation deletion with a forced digest first (force_digest_conversation()
 bypasses the normal 10-message threshold — agents/chat_memory.py). Found and fixed a real bug
 during its own verification: _run_digest() was discarding an already-synthesized real digest

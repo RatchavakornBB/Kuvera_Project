@@ -1,6 +1,9 @@
 """The one write/read path for the deals resource — routes call these
 functions, never the supabase client directly."""
 
+import sys
+import threading
+import traceback
 from datetime import datetime, timezone
 from typing import Any
 
@@ -88,7 +91,31 @@ def create_deal(name: str, client_name: str, industries: list[str], owner_id: st
         )
         .execute()
     )
-    return res.data[0]
+    deal = res.data[0]
+    _draft_nda_async(deal["id"])
+    return deal
+
+
+def _draft_nda_async(deal_id: str) -> None:
+    """After a deal is created, the Drafting Lead auto-drafts a mutual NDA and
+    drops it into the deal's Documents tab. Runs on a daemon thread and is
+    best-effort: an NDA-draft failure (LLM error/timeout/embeddings) must never
+    make deal creation fail or hang — the deal row is already committed. Mirrors
+    the background best-effort pattern used for citation-link fetching in
+    app/services/documents.py. The underlying call_model() invocation is logged
+    to agent_invocations regardless, and any post-model failure is printed to
+    stderr rather than swallowed silently, so a demo failure is diagnosable."""
+
+    def _run() -> None:
+        try:
+            from agents.drafting_lead import draft_and_store_nda
+
+            draft_and_store_nda(deal_id)
+        except Exception as e:  # noqa: BLE001 — background best-effort, must not propagate
+            print(f"[nda-draft] failed for deal {deal_id}: {e}", file=sys.stderr)
+            traceback.print_exc()
+
+    threading.Thread(target=_run, daemon=True).start()
 
 
 def update_deal_stage(deal_id: str, stage: str) -> dict[str, Any] | None:
