@@ -18,6 +18,9 @@ class TaskCreate(BaseModel):
     text: str
     owner_id: str | None = None
     due_date: str | None = None
+    phase_id: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
 
 
 class TaskUpdate(BaseModel):
@@ -25,6 +28,22 @@ class TaskUpdate(BaseModel):
     owner_id: str | None = None
     due_date: str | None = None
     done: bool | None = None
+    phase_id: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+
+
+class PhaseCreate(BaseModel):
+    name: str
+    sort_order: int | None = None
+    color: str | None = None
+
+
+class PhaseUpdate(BaseModel):
+    name: str | None = None
+    sort_order: int | None = None
+    color: str | None = None
+    collapsed: bool | None = None
 
 
 class CloseDealRequest(BaseModel):
@@ -64,18 +83,54 @@ def get_deal(deal_id: str):
 def create_task(deal_id: str, body: TaskCreate):
     if deals_service.get_deal(deal_id) is None:
         raise HTTPException(status_code=404, detail="Deal not found")
-    return deals_service.create_task(deal_id, text=body.text, owner_id=body.owner_id, due_date=body.due_date)
+    return deals_service.create_task(
+        deal_id,
+        text=body.text,
+        owner_id=body.owner_id,
+        due_date=body.due_date,
+        phase_id=body.phase_id,
+        start_date=body.start_date,
+        end_date=body.end_date,
+    )
 
 
 @router.patch("/{deal_id}/tasks/{task_id}")
 def update_task(deal_id: str, task_id: str, body: TaskUpdate):
-    fields = {k: v for k, v in body.model_dump().items() if v is not None}
+    # exclude_unset (not "is not None") so the client can explicitly clear a
+    # field — e.g. drag a task off the grid by sending start_date=null, or move
+    # it to the unscheduled tray with phase_id=null.
+    fields = body.model_dump(exclude_unset=True)
     if not fields:
         raise HTTPException(status_code=400, detail="No fields to update")
     task = deals_service.update_task(deal_id, task_id, fields)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
+
+
+@router.post("/{deal_id}/phases")
+def create_phase(deal_id: str, body: PhaseCreate):
+    if deals_service.get_deal(deal_id) is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    return deals_service.create_phase(deal_id, name=body.name, sort_order=body.sort_order, color=body.color)
+
+
+@router.patch("/{deal_id}/phases/{phase_id}")
+def update_phase(deal_id: str, phase_id: str, body: PhaseUpdate):
+    fields = body.model_dump(exclude_unset=True)
+    if not fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    phase = deals_service.update_phase(deal_id, phase_id, fields)
+    if phase is None:
+        raise HTTPException(status_code=404, detail="Phase not found")
+    return phase
+
+
+@router.delete("/{deal_id}/phases/{phase_id}")
+def delete_phase(deal_id: str, phase_id: str):
+    if not deals_service.delete_phase(deal_id, phase_id):
+        raise HTTPException(status_code=404, detail="Phase not found")
+    return {"deleted": phase_id}
 
 
 @router.patch("/{deal_id}/stage")

@@ -1,10 +1,11 @@
-export type DealTab = 'overview' | 'documents' | 'analysis' | 'tasks';
+export type DealTab = 'overview' | 'documents' | 'analysis' | 'tasks' | 'plan';
 
 const TABS: { key: DealTab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'documents', label: 'Documents' },
   { key: 'analysis', label: 'Analysis' },
   { key: 'tasks', label: 'Tasks & Notes' },
+  { key: 'plan', label: 'Project Plan' },
 ];
 
 export function DealDetailTabs({ value, onChange }: { value: DealTab; onChange: (t: DealTab) => void }) {

@@ -42,6 +42,19 @@ export interface ApiTask {
   owner_id: string | null;
   due_date: string | null;
   done: boolean;
+  phase_id: string | null;
+  start_date: string | null;
+  end_date: string | null;
+}
+
+export interface ApiPhase {
+  id: string;
+  deal_id: string;
+  name: string;
+  sort_order: number;
+  color: string | null;
+  source: 'stage' | 'custom';
+  collapsed: boolean;
 }
 
 export interface ApiMeetingNote {
@@ -71,6 +84,7 @@ export interface ApiDealDetail extends ApiDeal {
   meeting_notes: ApiMeetingNote[];
   dd_items: ApiDDItem[];
   milestones: ApiMilestone[];
+  phases: ApiPhase[];
 }
 
 export async function fetchDeals(): Promise<ApiDeal[]> {
@@ -712,7 +726,14 @@ export async function fetchAnalystLeadGraph(): Promise<ApiAnalystLeadGraph> {
 
 export async function createTask(
   dealId: string,
-  body: { text: string; owner_id?: string | null; due_date?: string | null },
+  body: {
+    text: string;
+    owner_id?: string | null;
+    due_date?: string | null;
+    phase_id?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+  },
 ): Promise<ApiTask> {
   const res = await fetch(`${API_BASE_URL}/deals/${dealId}/tasks`, {
     method: 'POST',
@@ -723,6 +744,44 @@ export async function createTask(
     throw new Error(`POST /deals/${dealId}/tasks failed: ${res.status}`);
   }
   return res.json();
+}
+
+export async function createPhase(
+  dealId: string,
+  body: { name: string; sort_order?: number; color?: string | null },
+): Promise<ApiPhase> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/phases`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`POST /deals/${dealId}/phases failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function updatePhase(
+  dealId: string,
+  phaseId: string,
+  body: { name?: string; sort_order?: number; color?: string | null; collapsed?: boolean },
+): Promise<ApiPhase> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/phases/${phaseId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`PATCH /deals/${dealId}/phases/${phaseId} failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deletePhase(dealId: string, phaseId: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/deals/${dealId}/phases/${phaseId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    throw new Error(`DELETE /deals/${dealId}/phases/${phaseId} failed: ${res.status}`);
+  }
 }
 
 export async function updateDealStage(dealId: string, stage: string): Promise<ApiDeal> {
@@ -741,7 +800,14 @@ export async function updateDealStage(dealId: string, stage: string): Promise<Ap
 export async function updateTask(
   dealId: string,
   taskId: string,
-  body: { done?: boolean; text?: string; due_date?: string | null },
+  body: {
+    done?: boolean;
+    text?: string;
+    due_date?: string | null;
+    phase_id?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+  },
 ): Promise<ApiTask> {
   const res = await fetch(`${API_BASE_URL}/deals/${dealId}/tasks/${taskId}`, {
     method: 'PATCH',

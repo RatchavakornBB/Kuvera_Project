@@ -24,6 +24,18 @@ STAGES = (
 )
 
 
+def _seed_stage_phases(deal_id: str) -> None:
+    """Give a freshly created deal the 7 pipeline stages as default plan phases
+    (source='stage'). Mirrors the backfill in migration 20260722160000 so every
+    deal — old or new — opens the Project Plan tab with the same starting phases."""
+    client = get_client()
+    rows = [
+        {"deal_id": deal_id, "name": name, "sort_order": i, "source": "stage"}
+        for i, name in enumerate(STAGES)
+    ]
+    client.table("deal_phases").insert(rows).execute()
+
+
 def _doc_pending_count(deal_id: str) -> int:
     client = get_client()
     res = (
@@ -92,6 +104,7 @@ def create_deal(name: str, client_name: str, industries: list[str], owner_id: st
         .execute()
     )
     deal = res.data[0]
+    _seed_stage_phases(deal["id"])
     _draft_nda_async(deal["id"])
     return deal
 
@@ -135,11 +148,29 @@ def update_deal_stage(deal_id: str, stage: str) -> dict[str, Any] | None:
     return res.data[0] if res.data else None
 
 
-def create_task(deal_id: str, text: str, owner_id: str | None, due_date: str | None) -> dict[str, Any]:
+def create_task(
+    deal_id: str,
+    text: str,
+    owner_id: str | None,
+    due_date: str | None,
+    phase_id: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> dict[str, Any]:
     client = get_client()
     res = (
         client.table("tasks")
-        .insert({"deal_id": deal_id, "text": text, "owner_id": owner_id, "due_date": due_date})
+        .insert(
+            {
+                "deal_id": deal_id,
+                "text": text,
+                "owner_id": owner_id,
+                "due_date": due_date,
+                "phase_id": phase_id,
+                "start_date": start_date,
+                "end_date": end_date,
+            }
+        )
         .execute()
     )
     return res.data[0]
@@ -149,6 +180,38 @@ def update_task(deal_id: str, task_id: str, fields: dict[str, Any]) -> dict[str,
     client = get_client()
     res = client.table("tasks").update(fields).eq("id", task_id).eq("deal_id", deal_id).execute()
     return res.data[0] if res.data else None
+
+
+# --- Project-plan phases (Gantt) -------------------------------------------
+
+
+def create_phase(deal_id: str, name: str, sort_order: int | None = None, color: str | None = None) -> dict[str, Any]:
+    """Adds a custom phase. If no sort_order is given, it lands after the last
+    existing phase so new phases append to the bottom of the timeline."""
+    client = get_client()
+    if sort_order is None:
+        existing = client.table("deal_phases").select("sort_order").eq("deal_id", deal_id).execute().data
+        sort_order = (max((p["sort_order"] for p in existing), default=-1)) + 1
+    res = (
+        client.table("deal_phases")
+        .insert({"deal_id": deal_id, "name": name, "sort_order": sort_order, "color": color, "source": "custom"})
+        .execute()
+    )
+    return res.data[0]
+
+
+def update_phase(deal_id: str, phase_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
+    client = get_client()
+    res = client.table("deal_phases").update(fields).eq("id", phase_id).eq("deal_id", deal_id).execute()
+    return res.data[0] if res.data else None
+
+
+def delete_phase(deal_id: str, phase_id: str) -> bool:
+    """Deletes a phase. Its tasks survive with phase_id set null (the FK is
+    ON DELETE SET NULL), landing in the unscheduled tray rather than vanishing."""
+    client = get_client()
+    res = client.table("deal_phases").delete().eq("id", phase_id).eq("deal_id", deal_id).execute()
+    return bool(res.data)
 
 
 def close_deal(deal_id: str, outcome: str) -> dict[str, Any]:
@@ -195,6 +258,9 @@ def get_deal(deal_id: str) -> dict[str, Any] | None:
     deal["contacts"] = client.table("contacts").select("*").eq("deal_id", deal_id).execute().data
     deal["documents"] = client.table("documents").select("*").eq("deal_id", deal_id).execute().data
     deal["tasks"] = client.table("tasks").select("*").eq("deal_id", deal_id).execute().data
+    deal["phases"] = (
+        client.table("deal_phases").select("*").eq("deal_id", deal_id).order("sort_order").execute().data
+    )
     deal["meeting_notes"] = client.table("meeting_notes").select("*").eq("deal_id", deal_id).execute().data
     deal["dd_items"] = client.table("dd_items").select("*").eq("deal_id", deal_id).execute().data
     deal["milestones"] = (

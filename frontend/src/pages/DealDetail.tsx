@@ -8,6 +8,7 @@ import { RequiredDocumentsChecklist } from '../components/dealDetail/RequiredDoc
 import { DealFileLibrary } from '../components/dealDetail/DealFileLibrary';
 import { AnalysisTab } from '../components/dealDetail/AnalysisTab';
 import { TaskList } from '../components/dealDetail/TaskList';
+import { ProjectPlanTab } from '../components/dealDetail/ProjectPlanTab';
 import { MeetingNotesFeed } from '../components/dealDetail/MeetingNotesFeed';
 import { AskAboutDealPanel } from '../components/dealDetail/AskAboutDealPanel';
 import { fetchDeal } from '../lib/api';
@@ -19,7 +20,7 @@ export function DealDetail() {
   const { askAboutDeal } = useOutletContext<ShellContext>();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab');
-  const validTabs: DealTab[] = ['overview', 'documents', 'analysis', 'tasks'];
+  const validTabs: DealTab[] = ['overview', 'documents', 'analysis', 'tasks', 'plan'];
   const [tab, setTab] = useState<DealTab>(
     validTabs.includes(initialTab as DealTab) ? (initialTab as DealTab) : 'overview',
   );
@@ -42,25 +43,29 @@ export function DealDetail() {
       <DealDetailHeader deal={deal} />
       <DealDetailTabs value={tab} onChange={setTab} />
 
-      <div className="flex items-start gap-4">
-        <div className="min-w-0 flex-1">
-          {tab === 'overview' && <OverviewTab deal={deal} />}
-          {tab === 'documents' && (
-            <div className="flex flex-col gap-4">
-              <RequiredDocumentsChecklist items={deal.dd_items} />
-              <DealFileLibrary dealId={deal.id} documents={deal.documents} />
-            </div>
-          )}
-          {tab === 'analysis' && <AnalysisTab deal={deal} />}
-          {tab === 'tasks' && (
-            <div className="flex flex-col gap-4">
-              <TaskList dealId={deal.id} tasks={deal.tasks} />
-              <MeetingNotesFeed notes={deal.meeting_notes} />
-            </div>
-          )}
+      {tab === 'plan' ? (
+        <ProjectPlanTab dealId={deal.id} tasks={deal.tasks} phases={deal.phases} />
+      ) : (
+        <div className="flex items-start gap-4">
+          <div className="min-w-0 flex-1">
+            {tab === 'overview' && <OverviewTab deal={deal} />}
+            {tab === 'documents' && (
+              <div className="flex flex-col gap-4">
+                <RequiredDocumentsChecklist items={deal.dd_items} />
+                <DealFileLibrary dealId={deal.id} documents={deal.documents} />
+              </div>
+            )}
+            {tab === 'analysis' && <AnalysisTab deal={deal} />}
+            {tab === 'tasks' && (
+              <div className="flex flex-col gap-4">
+                <TaskList dealId={deal.id} tasks={deal.tasks} />
+                <MeetingNotesFeed notes={deal.meeting_notes} />
+              </div>
+            )}
+          </div>
+          <AskAboutDealPanel dealName={deal.name} onAsk={() => askAboutDeal(deal.id, deal.name)} />
         </div>
-        <AskAboutDealPanel dealName={deal.name} onAsk={() => askAboutDeal(deal.id, deal.name)} />
-      </div>
+      )}
     </div>
   );
 }
