@@ -10,6 +10,7 @@ agent_name's model_id, dispatch to the client for that model_id's provider.
 """
 
 from functools import lru_cache
+from typing import Callable
 
 import anthropic
 
@@ -29,7 +30,12 @@ AGENT_MODELS: dict[str, str] = {
     "clause_extractor": "claude-sonnet-5",
     "contracts_lead": "claude-sonnet-5",
     "concierge_qa": "claude-sonnet-5",
-    "orchestrator": "claude-sonnet-5",
+    # The Orchestrator only classifies a message into one route (a single small
+    # tool call, <=256 output tokens) — Haiku does this well and adds a full
+    # Sonnet round-trip less latency in front of every chat message before the
+    # agent that actually answers even starts. Kept in sync with the DB seed in
+    # supabase/migrations/…_orchestrator_to_haiku.sql.
+    "orchestrator": "claude-haiku-4-5",
     "knowledge_promoter": "claude-sonnet-5",
     "industry_brief": "claude-sonnet-5",
     "competitor_brief": "claude-sonnet-5",
@@ -75,6 +81,7 @@ def call_model(
     max_tokens: int = 4096,
     betas: list[str] | None = None,
     track_invocation: bool = True,
+    on_delta: Callable[[str], None] | None = None,
 ) -> anthropic.types.Message:
     """Dispatches a chat completion for `agent_name` to that agent's
     configured model_id. Returns the provider's native response object —
@@ -97,7 +104,19 @@ def call_model(
     after) instead of one row per API call inside it — otherwise a single
     4-iteration loop would create 4 rows and break the Agent Hub's
     "one row per top-level invocation" semantics. Every existing
-    single-shot caller is unaffected (default True)."""
+    single-shot caller is unaffected (default True).
+
+    `on_delta`, when given, is called with each incremental chunk of the
+    response's TEXT as it is generated, so a caller (Concierge Q&A over the
+    /chat WebSocket) can forward tokens to the user instead of waiting for
+    the whole answer — the difference between a reply that appears to hang
+    for seconds and one that starts typing immediately. Only text deltas are
+    streamed, never tool-input JSON, so an agent that returns structured
+    tool output can stream its prose answer without leaking raw JSON. The
+    return value is unchanged: the fully-assembled Message, exactly as the
+    non-streaming path returns, so nothing downstream of call_model has to
+    know whether streaming happened. Anthropic only for now — a gemini-*
+    agent given on_delta still answers correctly, just without live deltas."""
 
     config = get_agent_config(agent_name)
     model_id = config["model_id"] if config else AGENT_MODELS.get(agent_name, DEFAULT_MODEL)
@@ -122,7 +141,16 @@ def call_model(
         if tools:
             kwargs["tools"] = tools
         try:
-            if betas:
+            if on_delta is not None and not betas:
+                # Streaming path: forward text as it arrives, then hand back the
+                # same fully-assembled Message the non-streaming path returns.
+                # text_stream yields only text-block deltas, so tool-input JSON
+                # (e.g. Concierge's cite_sources call) never reaches on_delta.
+                with client.messages.stream(**kwargs) as stream:
+                    for text in stream.text_stream:
+                        on_delta(text)
+                    response = stream.get_final_message()
+            elif betas:
                 response = client.beta.messages.create(betas=betas, **kwargs)
             else:
                 response = client.messages.create(**kwargs)

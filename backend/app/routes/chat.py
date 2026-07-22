@@ -1,12 +1,28 @@
-"""/chat WebSocket — system-architecture.md Section 4.4. Request/response
-over the WebSocket connection, not token streaming (D-012 — Concierge
-Q&A's structured tool-use output makes true streaming meaningfully more
-complex; this is timeline Section 7's own 4th cut-order item, invoked
-deliberately).
+"""/chat WebSocket — system-architecture.md Section 4.4.
+
+Concierge Q&A now streams: its answer types out token-by-token as it is
+generated (revisiting D-012, which had deferred this because the answer used
+to be a structured tool field — agents/nodes/concierge_qa.py now returns the
+answer as plain prose and keeps only *sources* structured, so the prose
+streams cleanly while sources still arrive intact). The wire protocol is a
+sequence of {"type":"delta","text":...} frames followed by one terminal
+{"type":"final", ...} frame carrying the authoritative full message; every
+other route (analyst, contracts, drafting, web research, stage update) emits
+no deltas and just the final frame, so they are unchanged from the caller's
+point of view.
+
+Streaming crosses an async/sync boundary: the LangGraph nodes run in a
+threadpool (run_in_threadpool), while the WebSocket send is async on the event
+loop. The on_delta callback bridges them with run_coroutine_threadsafe onto the
+loop captured before the threadpool call — deltas come from a single worker
+thread, so they stay ordered.
 
 deal_id is required for any answer — no deal_id means no answer, per
 AGENT.md Section 11's deal_id scope invariant extended to chat.
 """
+
+import asyncio
+from typing import Callable
 
 from agents.chat_memory import maybe_digest_conversation
 from agents.errors import NodeFailure
@@ -28,7 +44,9 @@ from app.services import drafting as drafting_service
 router = APIRouter(tags=["chat"])
 
 
-async def _handle_message(deal_id: str | None, message: str) -> dict:
+async def _handle_message(
+    deal_id: str | None, message: str, on_delta: Callable[[str], None] | None = None
+) -> dict:
     if not deal_id:
         return {
             "role": "assistant",
@@ -115,7 +133,7 @@ async def _handle_message(deal_id: str | None, message: str) -> dict:
         await run_in_threadpool(deals_service.update_deal_stage, deal_id, update["stage"])
         return {"role": "assistant", "text": update["confirmation"]}
 
-    result = await run_in_threadpool(concierge_service.ask_about_deal, deal_id, message)
+    result = await run_in_threadpool(concierge_service.ask_about_deal, deal_id, message, on_delta)
     return {"role": "assistant", "text": result["answer"], "sources": result.get("sources", [])}
 
 
@@ -141,8 +159,18 @@ async def chat_websocket(websocket: WebSocket):
                     chat_conversations_service.save_message, conversation_id, "user", message
                 )
 
+            # Bridge streamed tokens from the threadpool worker back onto this
+            # event loop. Fire-and-forget send per delta; a single worker thread
+            # produces them, so they arrive in order.
+            loop = asyncio.get_running_loop()
+
+            def on_delta(text: str) -> None:
+                asyncio.run_coroutine_threadsafe(
+                    websocket.send_json({"type": "delta", "text": text}), loop
+                )
+
             try:
-                response = await _handle_message(deal_id, message)
+                response = await _handle_message(deal_id, message, on_delta)
             except NodeFailure as e:
                 response = {"role": "assistant", "text": f"Something went wrong: {e.reason} ({e.raw_error})"}
 
@@ -157,7 +185,10 @@ async def chat_websocket(websocket: WebSocket):
                     response.get("artifact"),
                 )
 
-            await websocket.send_json(response)
+            # Terminal frame — carries the authoritative full text (which any
+            # streamed deltas were building up to), so the client can replace its
+            # streamed buffer with this and pick up conversation_id/artifact/sources.
+            await websocket.send_json({**response, "type": "final"})
 
             if deal_id:
                 # Best-effort, fires only every DIGEST_TRIGGER_MESSAGE_COUNT

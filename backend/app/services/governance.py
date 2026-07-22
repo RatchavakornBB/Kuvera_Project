@@ -6,6 +6,7 @@ every real LLM invocation — this is not a decorative admin UI."""
 from datetime import datetime, timezone
 from typing import Any
 
+from agents.agent_config import invalidate_agent_config_cache
 from agents.eval_cases import create_eval_case as _create_eval_case
 from agents.eval_cases import delete_eval_case as _delete_eval_case
 from agents.eval_cases import list_eval_cases as _list_eval_cases
@@ -43,6 +44,9 @@ def create_agent(agent_name: str, model_id: str, skill_content: str = "") -> dic
         .insert({"agent_name": agent_name, "model_id": model_id, "skill_content": skill_content})
         .execute()
     )
+    # A get_agent_config(agent_name) that ran before this insert would have cached a
+    # None miss; drop it so the new row is visible on the next call.
+    invalidate_agent_config_cache(agent_name)
     return res.data[0]
 
 
@@ -117,6 +121,10 @@ def _resolve_change(change_id: str, action: str) -> dict[str, Any]:
         client.table("agent_configs").update(
             {change["change_type"]: change["new_value"], "updated_at": now}
         ).eq("agent_name", change["agent_name"]).execute()
+        # call_model() caches configs for a few seconds (agents/agent_config.py) — drop
+        # this agent's entry now so the approved model_id/skill_content is live on the
+        # very next call in this process, not up to the TTL later.
+        invalidate_agent_config_cache(change["agent_name"])
 
     client.table("pending_changes").update({"status": action, "reviewed_at": now}).eq("id", change_id).execute()
 

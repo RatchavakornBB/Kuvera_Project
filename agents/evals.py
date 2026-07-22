@@ -111,16 +111,20 @@ CLAUSE_TOOL = {
     },
 }
 
-ANSWER_TOOL = {
-    "name": "answer_question",
-    "description": "Answer the user's question about this deal, grounded in the provided data.",
+# Mirrors agents/nodes/concierge_qa.py's production tool (duplicated per D-007 —
+# evals stays independent of the node): the answer is streamed prose, not a tool
+# field, so only sources come back structured through cite_sources.
+CITE_SOURCES_TOOL = {
+    "name": "cite_sources",
+    "description": (
+        "After writing your answer, call this once with the deal records the answer drew from."
+    ),
     "input_schema": {
         "type": "object",
         "properties": {
-            "answer": {"type": "string"},
             "sources": {"type": "array", "items": {"type": "string"}},
         },
-        "required": ["answer", "sources"],
+        "required": ["sources"],
     },
 }
 
@@ -234,7 +238,7 @@ WEB_FETCH_BETAS = ["web-fetch-2025-09-10"]
 AGENT_TOOLS: dict[str, list[dict]] = {
     "risk_flagger": [RISK_FLAGGER_TOOL],
     "clause_extractor": [CLAUSE_TOOL],
-    "concierge_qa": [ANSWER_TOOL],
+    "concierge_qa": [CITE_SOURCES_TOOL],
     "orchestrator": [ROUTE_TOOL],
     "knowledge_promoter": [SYNTHESIS_TOOL],
     "industry_brief": [WEB_SEARCH_TOOL, WEB_FETCH_TOOL],
@@ -460,8 +464,9 @@ EVAL_CASES: dict[str, list[dict[str, Any]]] = {
                 "You are Concierge, the Kuvera Assistant's internal Q&A agent. You answer questions "
                 "about EXACTLY ONE deal. The DEAL DATA given with each question is everything known "
                 "about that deal — ground your answer only in it. If the answer isn't contained in "
-                "the deal data, say so plainly rather than guessing. Call answer_question with your "
-                "result.\n\nDEAL DATA:\nDeal: Project Riverstone. Stage: Due Diligence. Risk flags: "
+                "the deal data, say so plainly rather than guessing. Write your answer as plain prose, "
+                "then call cite_sources with the records you used.\n\nDEAL DATA:\nDeal: Project "
+                "Riverstone. Stage: Due Diligence. Risk flags: "
                 "[high] Change-of-control clause in the primary MSA allows the counterparty to "
                 "terminate without consent. Milestones: NDA signed 2026-05-01.\n\nQUESTION: What is "
                 "the highest-severity risk flagged on this deal so far?"
@@ -473,8 +478,9 @@ EVAL_CASES: dict[str, list[dict[str, Any]]] = {
                 "You are Concierge, the Kuvera Assistant's internal Q&A agent. You answer questions "
                 "about EXACTLY ONE deal. The DEAL DATA given with each question is everything known "
                 "about that deal — ground your answer only in it. If the answer isn't contained in "
-                "the deal data, say so plainly rather than guessing. Call answer_question with your "
-                "result.\n\nDEAL DATA:\nDeal: Project Riverstone. Stage: Due Diligence. Risk flags: "
+                "the deal data, say so plainly rather than guessing. Write your answer as plain prose, "
+                "then call cite_sources with the records you used.\n\nDEAL DATA:\nDeal: Project "
+                "Riverstone. Stage: Due Diligence. Risk flags: "
                 "[high] Change-of-control clause in the primary MSA.\n\nQUESTION: What was the "
                 "target company's EBITDA margin last year?"
             ),
@@ -639,13 +645,16 @@ def _run_candidate(
     client = _client()
     response = client.beta.messages.create(betas=betas, **kwargs) if betas else client.messages.create(**kwargs)
 
-    for block in response.content:
-        if block.type == "tool_use":
-            return json.dumps(block.input)
-    for block in response.content:
-        if block.type == "text":
-            return block.text
-    return "(no output)"
+    # Grade against BOTH the prose text and any structured tool input. For an
+    # agent whose whole answer is a tool call (risk_flagger, orchestrator) the
+    # text is empty and this is just the tool JSON as before; for Concierge the
+    # answer is now prose text with sources in a separate cite_sources call, so
+    # returning only the first tool_use would hand the judge the sources and
+    # drop the actual answer.
+    parts = [block.text for block in response.content if block.type == "text"]
+    parts += [json.dumps(block.input) for block in response.content if block.type == "tool_use"]
+    output = "\n".join(p for p in parts if p.strip()).strip()
+    return output or "(no output)"
 
 
 def _grade(criteria: str, output: str) -> tuple[bool, str]:

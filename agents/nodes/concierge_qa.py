@@ -12,6 +12,8 @@ this call that are actually stable across many consecutive calls to this
 agent, so they're the parts worth marking as a cache breakpoint
 (call_model's cache_control on the system block)."""
 
+from typing import Callable
+
 from agents.adapters.model_adapter import call_model
 from agents.chat_memory import chat_history_context
 from agents.company_research import get_current_company_research
@@ -20,20 +22,23 @@ from agents.industry_brief import get_current_industry_brief
 from agents.knowledge import get_deal_industry
 from agents.retry import with_retry
 
-ANSWER_TOOL = {
-    "name": "answer_question",
-    "description": "Answer the user's question about this deal, grounded in the provided data.",
+# Sources come back through a tool call so they stay structured, but the answer
+# itself is ordinary streamed prose (not a tool field) — that's what lets the
+# reply type out live over the /chat WebSocket instead of materializing all at
+# once. cite_sources is NOT required: a model that answers in prose and skips it
+# still gives a valid answer with no sources, which is fine.
+CITE_SOURCES_TOOL = {
+    "name": "cite_sources",
+    "description": (
+        "After writing your answer, call this once with the deal records the answer drew "
+        "from, e.g. 'Milestone: NDA signed', 'Document: FY2025 audited financial statements'."
+    ),
     "input_schema": {
         "type": "object",
         "properties": {
-            "answer": {"type": "string"},
-            "sources": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Which records the answer drew from, e.g. 'Milestone: NDA signed', 'Document: FY2025 audited financial statements'",
-            },
+            "sources": {"type": "array", "items": {"type": "string"}},
         },
-        "required": ["answer", "sources"],
+        "required": ["sources"],
     },
 }
 
@@ -43,12 +48,12 @@ SYSTEM_PROMPT = (
     "about that deal — ground your answer only in it, plus the general industry "
     "background below if one is provided. If the answer isn't contained in the deal data, "
     "say so plainly rather than guessing. Never reference any deal other than the one "
-    "described in DEAL DATA — you have no knowledge of any other deal. Call "
-    "answer_question with your result."
+    "described in DEAL DATA — you have no knowledge of any other deal. Write your answer "
+    "as plain prose for the user, then call cite_sources with the records you used."
 )
 
 
-def _run_once(deal_id: str, question: str) -> dict:
+def _run_once(deal_id: str, question: str, on_delta: Callable[[str], None] | None = None) -> dict:
     context = build_deal_context(deal_id) + chat_history_context(deal_id, question)
 
     industry = get_deal_industry(deal_id)
@@ -67,19 +72,25 @@ def _run_once(deal_id: str, question: str) -> dict:
     response = call_model(
         "concierge_qa",
         messages=[{"role": "user", "content": f"DEAL DATA:\n{context}\n\nQUESTION: {question}"}],
-        tools=[ANSWER_TOOL],
+        tools=[CITE_SOURCES_TOOL],
         system=system,
         max_tokens=1024,
+        on_delta=on_delta,
     )
 
+    answer = "".join(block.text for block in response.content if block.type == "text").strip()
+    sources: list[str] = []
     for block in response.content:
-        if block.type == "tool_use" and block.name == "answer_question":
-            if "answer" not in block.input:
-                raise ValueError(f"tool_use input missing 'answer' key: {block.input!r}")
-            return {"answer": block.input["answer"], "sources": block.input.get("sources", [])}
+        if block.type == "tool_use" and block.name == "cite_sources":
+            sources = block.input.get("sources", [])
 
-    raise ValueError(f"model did not call answer_question (stop_reason={response.stop_reason!r})")
+    # The answer is now free text, so "model produced nothing usable" is the only
+    # real failure — a bare cite_sources call with no prose. Raise so with_retry
+    # gets one more attempt rather than returning an empty bubble to the user.
+    if not answer:
+        raise ValueError(f"model produced no answer text (stop_reason={response.stop_reason!r})")
+    return {"answer": answer, "sources": sources}
 
 
-def concierge_qa(deal_id: str, question: str) -> dict:
-    return with_retry("concierge_qa", lambda: _run_once(deal_id, question))
+def concierge_qa(deal_id: str, question: str, on_delta: Callable[[str], None] | None = None) -> dict:
+    return with_retry("concierge_qa", lambda: _run_once(deal_id, question, on_delta))
